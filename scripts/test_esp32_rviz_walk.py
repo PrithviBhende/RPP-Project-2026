@@ -9,7 +9,7 @@ Demonstrates real-time hardware/software synchronization:
    - Simulates authentic 3D dynamic body attitude (roll wobble, pitch oscillation, compliance bobbing).
 
 2. Physical Hardware Execution:
-   - Sends real-time locomotion commands over Wi-Fi to the ESP32 ("Sesame-Controller" @ 192.168.4.1).
+   - Sends real-time locomotion commands over Wi-Fi to the ESP32 ("Quadruped-Controller" / "Sesame-Controller" @ 192.168.4.1).
    - Triggers the physical MG90S servos to physically step forward in real life.
    - On shutdown (Ctrl+C), commands the ESP32 to stop motors and return to stand pose.
 """
