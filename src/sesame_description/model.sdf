@@ -1,0 +1,471 @@
+<sdf version='1.7'>
+  <model name='sesame_quadruped'>
+    <link name='base_footprint'>
+      <inertial>
+        <pose>0 0 0.052944 0 -0 0</pose>
+        <mass>0.28</mass>
+        <inertia>
+          <ixx>0.000143</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000178</iyy>
+          <iyz>0</iyz>
+          <izz>0.000264</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_footprint_fixed_joint_lump__body_collision_collision'>
+        <pose>0.001 0.004 0.061444 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.084 0.068 0.062</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='base_footprint_fixed_joint_lump__internal_frame_visual_visual'>
+        <pose>0.02562 0.002389 0.031832 1.5708 -0 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/Internal-Frame-v121.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='base_footprint_fixed_joint_lump__bottom_cover_visual_visual_1'>
+        <pose>0.02562 0.002389 0.031832 1.5708 -0 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/Bottom-Cover-v121.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='base_footprint_fixed_joint_lump__top_cover_visual_visual_2'>
+        <pose>0.02562 0.002389 0.031832 1.5708 -0 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/Top-Cover-Enclosed-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+      <gravity>0</gravity>
+    </link>
+    <joint name='L1' type='revolute'>
+      <pose relative_to='base_footprint'>0.024097 0.030172 0.06485 -3.14159 -0 -3.14159</pose>
+      <parent>base_footprint</parent>
+      <child>l1_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='l1_link'>
+      <pose relative_to='L1'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.01 0.016 0.005 0 -0 0</pose>
+        <mass>0.02</mass>
+        <inertia>
+          <ixx>2.2e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.8e-06</iyy>
+          <iyz>0</iyz>
+          <izz>5.7e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='l1_link_fixed_joint_lump__l1_visual_visual'>
+        <pose>0.017352 -0.015198 0.033018 -1.5708 0 -2.35619</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/L1-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='L3' type='revolute'>
+      <pose relative_to='l1_link'>-0.02071 0.031375 0.01779 1.5708 0 2.35619</pose>
+      <parent>l1_link</parent>
+      <child>l3_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='l3_link'>
+      <pose relative_to='L3'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.002 0.024 -0.016 0 -0 0</pose>
+        <mass>0.006</mass>
+        <inertia>
+          <ixx>2.3e-07</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.75e-06</iyy>
+          <iyz>0</iyz>
+          <izz>1.86e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='l3_link_fixed_joint_lump__l3_visual_visual'>
+        <pose>-0.015228 -0.059847 -0.007287 1.5708 1.5708 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/L3-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='l3_link_fixed_joint_lump__l3_foot_visual_visual_1'>
+        <pose>-0.0016 0.04006 -0.016 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.007</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='L2' type='revolute'>
+      <pose relative_to='base_footprint'>-0.024303 0.030172 0.06485 -3.14159 0 0</pose>
+      <parent>base_footprint</parent>
+      <child>l2_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='l2_link'>
+      <pose relative_to='L2'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.01 -0.016 0.005 0 -0 0</pose>
+        <mass>0.02</mass>
+        <inertia>
+          <ixx>2.2e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.8e-06</iyy>
+          <iyz>0</iyz>
+          <izz>5.7e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='l2_link_fixed_joint_lump__l2_visual_visual'>
+        <pose>0.017352 0.015198 0.033018 -1.5708 -0 2.35619</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/L2-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='L4' type='revolute'>
+      <pose relative_to='l2_link'>-0.02071 -0.031375 0.01779 -1.5708 0 -2.35619</pose>
+      <parent>l2_link</parent>
+      <child>l4_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='l4_link'>
+      <pose relative_to='L4'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.002 -0.024 -0.016 0 -0 0</pose>
+        <mass>0.006</mass>
+        <inertia>
+          <ixx>2.3e-07</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.75e-06</iyy>
+          <iyz>0</iyz>
+          <izz>1.86e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='l4_link_fixed_joint_lump__l4_visual_visual'>
+        <pose>-0.015228 0.059847 -0.007287 1.5708 1.5708 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/L4-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='l4_link_fixed_joint_lump__l4_foot_visual_visual_1'>
+        <pose>-0.0016 -0.04006 -0.016 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.007</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='R1' type='revolute'>
+      <pose relative_to='base_footprint'>0.024097 -0.020628 0.06485 -3.14159 -0 -3.14159</pose>
+      <parent>base_footprint</parent>
+      <child>r1_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='r1_link'>
+      <pose relative_to='R1'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.01 -0.016 0.005 0 -0 0</pose>
+        <mass>0.02</mass>
+        <inertia>
+          <ixx>2.2e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.8e-06</iyy>
+          <iyz>0</iyz>
+          <izz>5.7e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='r1_link_fixed_joint_lump__r1_visual_visual'>
+        <pose>0.017352 0.015198 0.033018 -1.5708 -0 2.35619</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/R1-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='R3' type='revolute'>
+      <pose relative_to='r1_link'>-0.02071 -0.031375 0.01779 -1.5708 0 -2.35619</pose>
+      <parent>r1_link</parent>
+      <child>r3_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='r3_link'>
+      <pose relative_to='R3'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.002 -0.024 -0.016 0 -0 0</pose>
+        <mass>0.006</mass>
+        <inertia>
+          <ixx>2.3e-07</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.75e-06</iyy>
+          <iyz>0</iyz>
+          <izz>1.86e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='r3_link_fixed_joint_lump__r3_visual_visual'>
+        <pose>-0.015228 0.059847 -0.007287 1.5708 1.5708 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/R3-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='r3_link_fixed_joint_lump__r3_foot_visual_visual_1'>
+        <pose>-0.0016 -0.04006 -0.016 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.007</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='R2' type='revolute'>
+      <pose relative_to='base_footprint'>-0.024303 -0.020628 0.06485 -3.14159 0 0</pose>
+      <parent>base_footprint</parent>
+      <child>r2_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='r2_link'>
+      <pose relative_to='R2'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.01 0.016 0.005 0 -0 0</pose>
+        <mass>0.02</mass>
+        <inertia>
+          <ixx>2.2e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.8e-06</iyy>
+          <iyz>0</iyz>
+          <izz>5.7e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='r2_link_fixed_joint_lump__r2_visual_visual'>
+        <pose>0.017352 -0.015198 0.033018 -1.5708 0 -2.35619</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/R2-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <joint name='R4' type='revolute'>
+      <pose relative_to='r2_link'>-0.02071 0.031375 0.01779 1.5708 0 2.35619</pose>
+      <parent>r2_link</parent>
+      <child>r4_link</child>
+      <axis>
+        <xyz>0 0 -1</xyz>
+        <limit>
+          <lower>-0.8</lower>
+          <upper>0.8</upper>
+          <effort>0.18</effort>
+          <velocity>10.472</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.5</damping>
+          <friction>0.1</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='r4_link'>
+      <pose relative_to='R4'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.002 0.024 -0.016 0 -0 0</pose>
+        <mass>0.006</mass>
+        <inertia>
+          <ixx>2.3e-07</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.75e-06</iyy>
+          <iyz>0</iyz>
+          <izz>1.86e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name='r4_link_fixed_joint_lump__r4_visual_visual'>
+        <pose>-0.015228 -0.059847 -0.007287 1.5708 1.5708 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://sesame_description/meshes/R4-v117.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='r4_link_fixed_joint_lump__r4_foot_visual_visual_1'>
+        <pose>-0.0016 0.04006 -0.016 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.007</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <gravity>0</gravity>
+    </link>
+    <plugin name='gazebo_ros_joint_pose_trajectory' filename='libgazebo_ros_joint_pose_trajectory.so'>
+      <ros>
+        <namespace>/</namespace>
+        <remapping>set_joint_trajectory:=set_joint_trajectory</remapping>
+      </ros>
+      <update_rate>50</update_rate>
+    </plugin>
+    <static>0</static>
+    <plugin name='gazebo_ros_joint_state_publisher' filename='libgazebo_ros_joint_state_publisher.so'>
+      <ros>
+        <namespace>/</namespace>
+        <remapping>joint_states:=joint_states</remapping>
+      </ros>
+      <update_rate>50</update_rate>
+      <joint_name>R1</joint_name>
+      <joint_name>R2</joint_name>
+      <joint_name>L1</joint_name>
+      <joint_name>L2</joint_name>
+      <joint_name>R4</joint_name>
+      <joint_name>R3</joint_name>
+      <joint_name>L3</joint_name>
+      <joint_name>L4</joint_name>
+    </plugin>
+    <gravity>0</gravity>
+  </model>
+</sdf>

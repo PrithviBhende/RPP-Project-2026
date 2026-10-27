@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# ROS 2 & Colcon
+build/
+install/
+log/
+COLCON_IGNORE
+
+# OS / Temporary
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*~
+*.swp
+*.bak
+~$*
+
+# Large CAD Archives (kept locally, not in Git)
+*.zip
+*.step
+*.SLDASM
+*.f3z
