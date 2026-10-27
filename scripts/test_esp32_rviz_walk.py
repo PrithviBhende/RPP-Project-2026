@@ -243,7 +243,7 @@ class SesameHardwareRVizWalkNode(Node):
 
     def shutdown(self):
         """Clean shutdown restoring upright stand pose on both RViz and hardware."""
-        self.get_logger().info("Stopping robot motors and returning to stand pose...")
+        print("\n[Sesame] Stopping robot motors and returning to stand pose...")
         self.esp32.stop_robot()
 
         # Send stand pose to RViz (all joints 0.0 rad)
