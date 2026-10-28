@@ -1,32 +1,71 @@
-# Sesame Quadruped: Autonomous Path Planning & Interactive Locomotion (RPP-2026)
+# Sesame Quadruped: Autonomous Vision-Guided Path Planning & Digital Twin (RPP-2026)
 
-An end-to-end autonomous robotics project featuring dynamic A* path planning, real-time obstacle avoidance, top-down computer vision perception, and physics-grounded quadruped locomotion for the **Sesame Mini Quadruped Robot** in ROS 2 Humble and Gazebo Classic.
+An end-to-end autonomous robotics project featuring real-time overhead computer vision tracking (ArUco planar homography), dynamic A* path planning with strict $\ge 5\text{ cm}$ obstacle clearance, Stanley steering path-following control, human hand safety gating, ESP32 Wi-Fi hardware-in-the-loop actuation, and a live ROS 2 Humble RViz 3D Digital Twin.
 
 ---
 
-## Key Features
+## Architecture Overview
 
-1. **Autonomous Dynamic Path Planning (Auto-Waypoint Generation)**
-   * **Dynamic A\* Grid Planner:** Solves optimal collision-free trajectories across the $1.5\text{ m} \times 1.0\text{ m}$ chart paper arena.
-   * **String-Pulling Shortcut Algorithm:** Automatically extracts clean geometric waypoints without hardcoded paths.
-   * **Euclidean Minkowski-Sum Inflation:** Exact rounded-box obstacle dilation eliminates false corner collision deadlocks.
+```
+          Overhead Camera (USB DroidCam / IP Webcam / Phone)
+                                 |
+                                 v
+               +-----------------------------------+
+               |       vision_tracker.py           |
+               | - Multi-version ArUco Detector    |
+               | - 4-Corner Planar Homography      |
+               | - Real-time Hand Detection (HSV)  |
+               | - Metric Pose Extraction (cm, deg)|
+               +-----------------+-----------------+
+                                 |
+                                 v
+               +-----------------------------------+
+               |       vision_planner.py           |
+               | - Dynamic A* Search on Grid       |
+               | - Strict >= 5 cm Box Clearance    |
+               | - String-Pulling Waypoint Smoother|
+               | - Hand-Gated Auto-Replanning      |
+               +-----------------+-----------------+
+                                 |
+                                 v
+               +-----------------------------------+
+               |     stanley_controller.py         |
+               | - Cross-Track Error (CTE) Law     |
+               | - Heading Error Correction        |
+               | - Deadbands (< 12 deg, < 2 cm)    |
+               +--------+-----------------+--------+
+                        |                 |
+       (Wi-Fi /cmd?go=) |                 | (ROS 2 /joint_states & TF)
+                        v                 v
+            +-----------------------+ +-----------------------+
+            |  Physical ESP32 Robot | |  ROS 2 RViz Twin      |
+            | - 8x MG90S Servos     | | - Fixed Frame: map    |
+            | - WROOM-32 Pinout     | | - 3D Robot Model      |
+            | - Stand on Arrival    | | - Green /plan_path    |
+            | - Auto-Halt on Hand   | | - 3D Box Markers      |
+            +-----------------------+ +-----------------------+
+```
 
-2. **Interactive Live Gazebo Environment**
-   * **5 Draggable Obstacle Boxes:** Click and drag any of the 5 boxes in Gazebo at runtime.
-   * **Real-Time Obstacle Avoidance:** If an obstacle is placed directly in the robot's forward path, the robot halts, holds its stance, computes a new collision-free detour, and resumes navigation.
-   * **Green Start Marker:** Dynamically tracks directly below the robot wherever it walks or is placed.
-   * **Red Goal Marker:** Interactive target disk. Drag it anywhere on the chart paper, and the robot immediately detects the new target and navigates to it.
+---
 
-3. **Physics-Grounded Locomotion & Actuation**
-   * **Central Pattern Generator (CPG) Gait:** Ported from [`sesame-ml`](https://github.com/lukehollis/sesame-ml) with smooth cycloidal foot swing ($\max(\sin\phi, 0)^2$) for zero-impact touchdown.
-   * **Closed-Loop Attitude Stabilization:** Reads live 50 Hz IMU telemetry (`/sesame/imu`) and injects pitch/roll feedback into hip servos to actively prevent tipping.
-   * **TowerPro MG90S Actuator Dynamics:** Enforces a physical slew-rate ceiling ($10.47\text{ rad/s}$ / $600^\circ/\text{s}$), torque saturation ($0.18\text{ N}\cdot\text{m}$), and first-order motor lag ($\tau = 35\text{ ms}$).
-   * **Realistic Locomotion Pacing:** Nominal forward walking speed of $\approx 3.8\text{ cm/s}$ and turning speed of $\approx 16^\circ/\text{s}$.
+## ArUco Marker ID Layout & Coordinates
 
-4. **Multi-Source Overhead Perception**
-   * Top-down overhead camera mounted at $z = 2.0\text{ m}$ streaming at 30 Hz on `/overhead_camera/image_raw`.
-   * Real-time OpenCV contour detection annotating bounding boxes and the active navigation trajectory on `/overhead_camera/annotated_image`.
-   * Standard ROS 2 topic broadcasts: `/map` (`OccupancyGrid`), `/plan` (`Path`), `/waypoints_markers` (`MarkerArray`), and `/odom`.
+Using standard high-contrast **`cv2.aruco.DICT_4X4_50`** markers:
+
+| Marker ID | Function | Position | Real Size Scale |
+| :---: | :--- | :--- | :---: |
+| **0** | **Arena Origin $(0, 0)$** | Bottom-Left Corner on floor | $6.0 \times 6.0\text{ cm}$ |
+| **1** | **Arena Corner BR** | Bottom-Right Corner on floor | $6.0 \times 6.0\text{ cm}$ |
+| **2** | **Arena Corner TR** | Top-Right Corner on floor | $6.0 \times 6.0\text{ cm}$ |
+| **3** | **Arena Corner TL** | Top-Left Corner on floor | $6.0 \times 6.0\text{ cm}$ |
+| **4** | **Robot Base Tracker** | Mounted flat on top of Sesame body *(arrow points to head)* | **$4.0 \times 4.0\text{ cm}$** |
+| **5** | **Goal Target** | Placed anywhere as destination | $6.0 \times 6.0\text{ cm}$ |
+| **10 – 14** | **Obstacle Blocks** | Centered on top of each box/block | $5.0 \times 5.0\text{ cm}$ |
+
+> **Printable Sheets:** Ready-to-print A4 sheets are located in the [`markers/`](markers/) directory:
+> - [`markers/print_sheet_1_arena_corners.png`](markers/print_sheet_1_arena_corners.png) (Corners 0 to 3)
+> - [`markers/print_sheet_2_robot_goal_obstacles.png`](markers/print_sheet_2_robot_goal_obstacles.png) (Robot ID 4, Goal ID 5, Obstacles 10 & 11)
+> - [`markers/print_sheet_3_more_obstacles.png`](markers/print_sheet_3_more_obstacles.png) (Obstacles 12, 13, 14)
 
 ---
 
@@ -34,91 +73,115 @@ An end-to-end autonomous robotics project featuring dynamic A* path planning, re
 
 ```text
 RPP-Project-2026/
-├── src/
-│   └── sesame_description/            # ROS 2 Simulation & Description Package
-│       ├── CMakeLists.txt
-│       ├── package.xml
-│       ├── launch/
-│       │   ├── gazebo.launch.py       # Gazebo world + robot + overhead camera launch
-│       │   └── view_robot.launch.py   # RViz URDF visualizer
-│       ├── worlds/
-│       │   └── chartpaper_arena.world # Interactive arena with 5 draggable boxes & markers
-│       ├── urdf/
-│       │   ├── sesame_gazebo.urdf     # Calibrated production URDF with IMU & trajectory plugins
-│       │   ├── sesame_ros2.urdf
-│       │   └── sesame.urdf
-│       └── meshes/                    # Production 3D STL meshes for 8 links & covers
+├── markers/                           # 1-Click Printable ArUco Markers
+│   ├── print_sheet_1_arena_corners.png
+│   ├── print_sheet_2_robot_goal_obstacles.png
+│   ├── print_sheet_3_more_obstacles.png
+│   └── *.png                          # Individual marker cards with crosshairs
 ├── scripts/
-│   ├── navigate_arena.py              # Interactive real-time path planner & CPG controller
-│   ├── sesame_path_planner.py         # Standalone A* path search module
-│   ├── sesame_kinematics.py           # 2-DOF leg inverse & forward kinematics
-│   ├── cpg.py                         # Central Pattern Generator oscillator baseline
-│   ├── constants.py                   # Canonical Sesame servo limits and conventions
-│   ├── test_gait.py                   # Locomotion & CPG validation test suite
-│   └── validate_urdf.py               # URDF joint limit and kinematic validator
-├── firmware/                          # Physical Robot ESP32 Firmware
-│   ├── sesame-firmware-main.ino       # Core Arduino/ESP32 locomotion & Web server
-│   ├── movement-sequences.h           # Keyframe gait definitions
-│   ├── captive-portal.h               # Wi-Fi Access Point configuration
-│   ├── face-bitmaps.h                 # OLED facial animations
-│   └── quadruped_calibration.csv      # Servo angle zero-offset calibration
-└── docs/
-    ├── path_planning_result.png       # Generated A* trajectory plot
-    ├── urdf_docs.md                   # Joint order & coordinate frame conventions
-    └── sesame-angle-guide.png         # Physical servo horn alignment guide
+│   ├── main_vision_navigator.py       # Master autonomous navigation node + HUD
+│   ├── vision_tracker.py              # Overhead ArUco tracking + homography + hand mask
+│   ├── vision_planner.py              # Dynamic A* planner with >= 5 cm clearance
+│   ├── stanley_controller.py          # Stanley steering law + ESP32 Wi-Fi bridge
+│   ├── test_camera_feed.py            # Live camera & marker diagnostic tool
+│   ├── generate_markers.py            # ArUco marker generator script
+│   └── test_esp32_rviz_walk.py        # Hardware-in-the-loop walk test bridge
+├── firmware/
+│   └── quadruped_mini/                # Exact Calibrated ESP32 WROOM-32 Firmware
+│       ├── quadruped_mini.ino         # Arduino sketch (SoftAP: Quadruped-Controller)
+│       ├── movement-sequences.h       # Calibrated rest, stand, and trot gaits
+│       ├── captive-portal.h           # Web dashboard
+│       └── face-bitmaps.h             # OLED screen expressions
+├── src/sesame_description/            # ROS 2 Humble Digital Twin Package
+│   ├── config/
+│   │   ├── vision_nav.rviz            # RViz config (Fixed Frame: map, path, 3D boxes)
+│   │   └── walk_test.rviz
+│   ├── launch/
+│   │   ├── vision_nav_rviz.launch.py  # Launches RViz + robot_state_publisher
+│   │   └── walk_rviz.launch.py
+│   ├── urdf/                          # Calibrated URDF models
+│   └── meshes/                        # 3D STL mesh files
+└── tests/
+    └── test_vision_system.py          # Automated verification test suite (5 tests)
 ```
 
 ---
 
-## Getting Started
+## Quickstart Guide
 
-### Prerequisites
-* **Operating System:** Ubuntu 22.04 LTS (Native or WSL2)
-* **ROS 2:** Humble Hawksbill
-* **Gazebo:** Gazebo Classic 11
-* **Python Libraries:**
-  ```bash
-  pip install numpy opencv-python
+### 1. Test Your Camera & Markers (Diagnostic Mode)
+Run the diagnostic tool to verify that all 4 corners, robot, and obstacles are recognized:
+
+* **Using USB Webcam / DroidCam Wired (Windows PowerShell):**
+  ```powershell
+  cd "C:\Users\prith\Documents\MYSPACE\RPP-Project-2026\scripts"
+  python test_camera_feed.py --source 0
+  ```
+* **Using Phone Wi-Fi Stream (IP Webcam / DroidCam):**
+  ```powershell
+  python test_camera_feed.py --source "http://192.168.0.131:8080/video"
+  ```
+* *Press `w` in the window to see the top-down flattened arena.*
+* *Press `h` to toggle the skin-detection mask.*
+
+---
+
+### 2. Run Autonomous Navigation (Windows PowerShell)
+
+* **Mode A: Synthetic Mock Demo (No camera or hardware needed):**
+  ```powershell
+  python main_vision_navigator.py --source mock --no-esp32
   ```
 
-### 1. Build the ROS 2 Simulation Package
-Symlink or copy `src/sesame_description` to your ROS 2 workspace:
-```bash
-mkdir -p ~/ros2_ws/src
-ln -s "$(pwd)/src/sesame_description" ~/ros2_ws/src/sesame_description
-cd ~/ros2_ws
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select sesame_description
-```
+* **Mode B: Real Camera Tracking (Dry-run without robot moving):**
+  ```powershell
+  python main_vision_navigator.py --source 0 --no-esp32
+  ```
 
-### 2. Launch Gazebo Simulation
-In Terminal 1:
-```bash
-source ~/ros2_ws/install/setup.bash
-ros2 launch sesame_description gazebo.launch.py
-```
-This loads the white chart paper arena with Sesame, the 5 interactive obstacle boxes, the green start marker, the red goal marker, and the overhead camera.
-
-### 3. Run the Interactive Autonomous Navigator
-In Terminal 2:
-```bash
-source ~/ros2_ws/install/setup.bash
-python3 scripts/navigate_arena.py
-```
+* **Mode C: Live Hardware Navigation (Phone Camera + Physical Robot):**
+  1. Connect PC Wi-Fi to the robot: **SSID:** `Quadruped-Controller` (Password: `12345678`).
+  2. Connect phone via USB cable running DroidCam.
+  3. Start navigation:
+     ```powershell
+     python main_vision_navigator.py --source 0 --esp32-ip 192.168.4.1
+     ```
 
 ---
 
-## Interactive Controls
+### 3. Run with ROS 2 RViz Digital Twin (WSL / Ubuntu)
 
-* **Move the Goal:** Click on the **Red Circle** (`goal_marker`) in Gazebo, press `T` (Translate tool), and drag it anywhere on the chart paper. Sesame immediately senses the new target and re-plans its trajectory.
-* **Block the Robot:** Click on any of the **5 black boxes** (`obstacle_box_1` to `5`), press `T`, and drag it directly in front of Sesame. The robot halts, holds its stand stance, re-plans a new collision-free detour, and resumes moving.
-* **Green Circle:** Always tracks dynamically directly underneath the robot.
-* **Overhead View:** View the live perception feed with annotated bounding boxes and planned trajectory:
+* **Terminal 1 (Launch RViz 3D View):**
   ```bash
-  ros2 run rqt_image_view rqt_image_view /overhead_camera/annotated_image
+  source ~/ros2_ws/install/setup.bash
+  ros2 launch sesame_description vision_nav_rviz.launch.py
+  ```
+
+* **Terminal 2 (Start Navigator with ROS 2 Bridge):**
+  ```bash
+  source ~/ros2_ws/install/setup.bash
+  cd "/mnt/c/Users/prith/Documents/MYSPACE/RPP-Project-2026/scripts"
+  python3 main_vision_navigator.py --source "http://192.168.0.131:8080/video" --ros2 --esp32-ip 192.168.4.1
   ```
 
 ---
 
-## Author
-* **Prithvi Bhende** ([@PrithviBhende](https://github.com/PrithviBhende))
+## Running the Automated Test Suite
+
+To verify all system subsystems (Marker generation, Homography accuracy, Hand detection, $\ge 5\text{ cm}$ clearance, and Stanley steering):
+
+```powershell
+python "C:\Users\prith\Documents\MYSPACE\RPP-Project-2026\tests\test_vision_system.py"
+```
+Or in WSL:
+```bash
+python3 /mnt/c/Users/prith/Documents/MYSPACE/RPP-Project-2026/tests/test_vision_system.py
+```
+*(All 5 tests run in $< 2\text{ s}$ and report detailed pass/fail status).*
+
+---
+
+## Safety Features Active
+
+1. **Planar Homography Auto-Rectification:** Even if your phone camera is held at an angle or vibrates slightly, OpenCV recalculates the homography matrix $H$ every frame, keeping coordinates stable down to pixel precision.
+2. **Hand-Presence Safety Interlock:** When a human hand enters the arena to reposition boxes or the goal marker, the robot immediately halts (`stop=1` / stand) and path replanning is held until the hand exits for $> 0.4\text{ s}$, preventing erratic trajectories.
+3. **Emergency Stop:** Press <kbd>q</kbd> or <kbd>ESC</kbd> in the OpenCV window or <kbd>Ctrl</kbd> + <kbd>C</kbd> in the terminal at any time to immediately cut power to the servos and level the robot upright.
