@@ -135,7 +135,7 @@ class ESP32CommandBridge:
     """Non-blocking Wi-Fi command transmitter to the physical ESP32."""
 
     def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True,
-                 invert_fwd_bwd: bool = True, invert_left_right: bool = True):
+                 invert_fwd_bwd: bool = False, invert_left_right: bool = True):
         self.ip = esp32_ip
         self.enabled = enabled
         self.invert_fwd_bwd = invert_fwd_bwd

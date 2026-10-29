@@ -117,7 +117,7 @@ class VisionNavigatorNode:
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
                  max_frames: int = 0, enable_hand_detect: bool = False,
-                 invert_fwd_bwd: bool = True, invert_left_right: bool = True):
+                 invert_fwd_bwd: bool = False, invert_left_right: bool = True):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
@@ -526,8 +526,8 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run without GUI windows (for automated testing)")
     parser.add_argument("--max-frames", type=int, default=0, help="Maximum frames to process before exiting (0 = infinite)")
     parser.add_argument("--enable-hand-detect", action="store_true", help="Enable pausing motion when human hand is in arena (Default: False)")
-    parser.add_argument("--no-invert-steering", action="store_true", help="Disable Left <-> Right command inversion for ESP32")
-    parser.add_argument("--no-invert-fwd-bwd", action="store_true", help="Disable Forward <-> Backward command inversion for ESP32")
+    parser.add_argument("--no-invert-steering", action="store_true", help="Disable Left <-> Right command inversion for ESP32 (Default: Inverted)")
+    parser.add_argument("--invert-fwd-bwd", action="store_true", help="Enable Forward <-> Backward command inversion for ESP32 (Default: Normal)")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -540,7 +540,7 @@ def main():
         headless=args.headless,
         max_frames=args.max_frames,
         enable_hand_detect=args.enable_hand_detect,
-        invert_fwd_bwd=not args.no_invert_fwd_bwd,
+        invert_fwd_bwd=args.invert_fwd_bwd,
         invert_left_right=not args.no_invert_steering
     )
 
