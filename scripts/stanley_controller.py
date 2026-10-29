@@ -134,12 +134,9 @@ class StanleyController:
 class ESP32CommandBridge:
     """Non-blocking Wi-Fi command transmitter to the physical ESP32."""
 
-    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True,
-                 invert_fwd_bwd: bool = False, invert_left_right: bool = True):
+    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True):
         self.ip = esp32_ip
         self.enabled = enabled
-        self.invert_fwd_bwd = invert_fwd_bwd
-        self.invert_left_right = invert_left_right
         self.running = True
         self.connected = False
         self.current_cmd = "stand"
@@ -178,28 +175,23 @@ class ESP32CommandBridge:
             with self.lock:
                 cmd = self.current_cmd
 
-            # Apply mechanical inversion to match physical robot motor assembly
-            hw_action = cmd
-            if cmd == "forward" and self.invert_fwd_bwd:
-                hw_action = "backward"
-            elif cmd == "backward" and self.invert_fwd_bwd:
-                hw_action = "forward"
-            elif cmd == "left" and self.invert_left_right:
-                hw_action = "right"
-            elif cmd == "right" and self.invert_left_right:
-                hw_action = "left"
-
-            if hw_action in ("forward", "backward", "left", "right"):
-                self._send_http_cmd(f"go={hw_action}", timeout=0.30)
-            elif hw_action == "stand":
+            if cmd == "forward":
+                self._send_http_cmd("go=forward", timeout=0.30)
+            elif cmd == "left":
+                self._send_http_cmd("go=left", timeout=0.30)
+            elif cmd == "right":
+                self._send_http_cmd("go=right", timeout=0.30)
+            elif cmd == "backward":
+                self._send_http_cmd("go=backward", timeout=0.30)
+            elif cmd == "stand":
                 if last_sent != "stand":
                     self._send_http_cmd("stop=1", timeout=0.20)
                     self._send_http_cmd("pose=stand", timeout=0.20)
-            elif hw_action == "stop":
+            elif cmd == "stop":
                 if last_sent != "stop":
                     self._send_http_cmd("stop=1", timeout=0.20)
 
-            last_sent = hw_action
+            last_sent = cmd
             time.sleep(0.35)
 
     def stop_robot(self):
