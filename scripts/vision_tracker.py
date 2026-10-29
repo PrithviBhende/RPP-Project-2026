@@ -158,7 +158,7 @@ class VisionTracker:
     """Primary vision tracking coordinator."""
 
     def __init__(self, width_cm: float = DEFAULT_ARENA_WIDTH_CM, height_cm: float = DEFAULT_ARENA_HEIGHT_CM,
-                 enable_hand_detect: bool = True):
+                 enable_hand_detect: bool = False):
         self.transformer = MetricArenaTransformer(width_cm, height_cm)
         self.hand_detector = HandDetector(enabled=enable_hand_detect)
 
@@ -248,8 +248,12 @@ class VisionTracker:
                     current_obs[mid] = self.transformer.warp_px_to_cm(ox, oy)
             self.obstacles = current_obs
 
-            # D. Hand Presence Detection
-            self.hand_detected, self.hand_boxes = self.hand_detector.detect_in_arena(warped)
+            # D. Hand Presence Detection (Disabled by default to ignore motor/ribbon wires)
+            if self.hand_detector.enabled:
+                self.hand_detected, self.hand_boxes = self.hand_detector.detect_in_arena(warped)
+            else:
+                self.hand_detected = False
+                self.hand_boxes = []
 
         # 4. Construct telemetry dictionary
         telemetry = {

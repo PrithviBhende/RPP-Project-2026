@@ -165,6 +165,31 @@ def test_stanley_controller():
     print("[PASS] Test 5: Stanley steering controller math and action mapping verified.")
 
 
+def test_frontal_obstacle_avoidance():
+    """Verify that an obstacle placed in front of the robot immediately inhibits forward motion and commands turning."""
+    from main_vision_navigator import VisionNavigatorNode
+    node = VisionNavigatorNode(source='mock', headless=True, enable_esp32=False)
+
+    # Robot at (20, 20), facing heading 0 rad (+X)
+    robot_pose = (20.0, 20.0, 0.0)
+
+    # Obstacle directly ahead at (35, 20) -> dist = 15 cm <= 24 cm threshold
+    obstacles = {10: (35.0, 20.0)}
+    blocked, turn_cmd, dist, oid = node.check_frontal_obstacle(robot_pose, obstacles)
+
+    assert blocked is True, "Failed to detect obstacle directly in front of robot."
+    assert dist == 15.0, f"Distance error: expected 15.0, got {dist}"
+    assert turn_cmd in ("left", "right"), f"Invalid turn command: {turn_cmd}"
+    assert oid == 10, f"Expected obstacle 10, got {oid}"
+
+    # Obstacle behind at (5, 20) -> should not trigger front obstacle
+    obs_behind = {10: (5.0, 20.0)}
+    blocked_behind, _, _, _ = node.check_frontal_obstacle(robot_pose, obs_behind)
+    assert blocked_behind is False, "False positive obstacle detection behind robot."
+
+    print("[PASS] Test 6: Frontal obstacle detection and evasive steering verified.")
+
+
 def main():
     print("=" * 70)
     print("RUNNING AUTOMATED VISION-GUIDED NAVIGATION TEST SUITE")
@@ -175,6 +200,7 @@ def main():
     test_hand_detection()
     test_path_planner_clearance()
     test_stanley_controller()
+    test_frontal_obstacle_avoidance()
 
     print("=" * 70)
     print("ALL TESTS PASSED! System is 100% verified and ready for hardware execution.")

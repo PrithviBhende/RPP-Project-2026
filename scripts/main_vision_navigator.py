@@ -48,7 +48,7 @@ from vision_tracker import (
     DEFAULT_ARENA_WIDTH_CM, DEFAULT_ARENA_HEIGHT_CM, WARP_PX_PER_CM
 )
 from vision_planner import VisionPathPlanner, ROBOT_RADIUS_CM
-from stanley_controller import StanleyController, ESP32CommandBridge
+from stanley_controller import StanleyController, ESP32CommandBridge, normalize_angle_rad
 
 # Optional ROS 2 integration
 try:
@@ -176,6 +176,42 @@ class VisionNavigatorNode:
             self.marker_pub = self.ros_node.create_publisher(MarkerArray, '/obstacle_markers', 10)
             print("[Navigator] ROS 2 RViz publishers initialized.")
 
+    def check_frontal_obstacle(self, robot_pose: tuple[float, float, float],
+                               obstacles: dict[int, tuple[float, float]],
+                               lookahead_dist_cm: float = 24.0,
+                               half_cone_deg: float = 45.0) -> tuple[bool, str | None, float, int | None]:
+        """
+        Detects if an obstacle block is directly in front of the robot within collision range.
+        Returns: (is_blocked, turn_recommendation, distance_to_obstacle, obstacle_id)
+        """
+        rx, ry, r_th = robot_pose
+        min_dist = float('inf')
+        blocked = False
+        turn_cmd = None
+        blocking_id = None
+
+        for oid, (ox, oy) in obstacles.items():
+            dx = ox - rx
+            dy = oy - ry
+            dist = math.hypot(dx, dy)
+            # If within forward reaction envelope (<= 24 cm covers 8 cm robot + 5 cm block + 11 cm buffer)
+            if dist <= lookahead_dist_cm:
+                angle_to_obs = math.atan2(dy, dx)
+                rel_bearing = normalize_angle_rad(angle_to_obs - r_th)
+                rel_bearing_deg = math.degrees(rel_bearing)
+
+                # Check if inside forward cone (+/- 45 deg)
+                if abs(rel_bearing_deg) <= half_cone_deg:
+                    blocked = True
+                    if dist < min_dist:
+                        min_dist = dist
+                        blocking_id = oid
+                        # Obstacle to the left (+bearing) -> steer right away from it
+                        # Obstacle to the right (-bearing) -> steer left away from it
+                        turn_cmd = "right" if rel_bearing_deg >= 0 else "left"
+
+        return blocked, turn_cmd, min_dist, blocking_id
+
     def run(self):
         print("\n" + "=" * 75)
         print("AUTONOMOUS VISION-GUIDED NAVIGATION ACTIVE")
@@ -212,43 +248,47 @@ class VisionNavigatorNode:
                 robot_pose = telemetry["robot_pose"]   # (rx_cm, ry_cm, r_heading_rad)
                 goal_pos = telemetry["goal_pos"]       # (gx_cm, gy_cm)
                 obstacles = telemetry["obstacles"]     # {id: (ox_cm, oy_cm)}
-                hand_present = telemetry["hand_detected"]
+                # 2. Check arena locking & poses
+                if telemetry["arena_locked"] and robot_pose is not None and goal_pos is not None:
+                    # Update dynamic obstacle positions
+                    obs_moved = self.planner.update_obstacles(obstacles)
+                    start_pt = (robot_pose[0], robot_pose[1])
 
-                # 2. Hand Safety Gating
-                # If a hand is inside the arena, pause robot and hold path replanning
-                if hand_present:
-                    self.hand_cooldown_t0 = now
-                    nav_status = "HAND_ACTIVE_PAUSED"
+                    # 3. Frontal Obstacle Detection: Check if an obstacle is directly in front
+                    front_blocked, turn_evade, obs_dist, block_oid = self.check_frontal_obstacle(robot_pose, obstacles)
+
+                    # Dynamic Path Planning: replan if obstacles moved, path empty, or front path obstructed
+                    force_replan = obs_moved or front_blocked
+                    if force_replan or not self.current_path:
+                        self.current_path = self.planner.plan(start_pt, goal_pos, force_replan=force_replan)
+
+                    # 4. Stanley Path Following Controller
+                    ctrl_res = self.stanley.compute_control(robot_pose, self.current_path)
+                    action = ctrl_res["action"]
+                    nav_status = ctrl_res["status"]
+
+                    # 5. Frontal Obstacle Collision Avoidance: Stop forward walking & turn to avoid!
+                    if front_blocked and nav_status != "ARRIVED":
+                        # If robot is attempting to walk forward into the obstacle, STOP forward & TURN!
+                        if action == "forward":
+                            if abs(ctrl_res["steering_deg"]) > 5.0:
+                                action = "left" if ctrl_res["steering_deg"] > 0 else "right"
+                            else:
+                                action = turn_evade if turn_evade else "left"
+                        nav_status = f"FRONT_OBS_AVOID (Obs {block_oid} at {obs_dist:.1f}cm -> Turn {action.upper()})"
+                        ctrl_res["status"] = nav_status
+                        ctrl_res["action"] = action
+                else:
                     action = "stand"
+                    nav_status = "SEARCHING"
                     ctrl_res = {
                         "action": "stand", "cross_track_err": 0.0,
                         "heading_err_deg": 0.0, "steering_deg": 0.0,
-                        "dist_to_goal": 0.0, "status": "HAND_PAUSED"
+                        "dist_to_goal": 0.0, "status": nav_status
                     }
-                else:
-                    # Allow 0.4s cooldown after hand exits before resuming motion & replanning
-                    hand_recently_exited = (now - self.hand_cooldown_t0) < 0.4
-
-                    if telemetry["arena_locked"] and robot_pose is not None and goal_pos is not None:
-                        # 3. Dynamic Path Planning
-                        obs_moved = self.planner.update_obstacles(obstacles)
-                        start_pt = (robot_pose[0], robot_pose[1])
-
-                        if (obs_moved or not self.current_path) and not hand_recently_exited:
-                            self.current_path = self.planner.plan(start_pt, goal_pos, force_replan=obs_moved)
-
-                        # 4. Stanley Path Following Controller
-                        ctrl_res = self.stanley.compute_control(robot_pose, self.current_path)
-                        action = ctrl_res["action"]
-                        nav_status = ctrl_res["status"]
-                    else:
-                        action = "stand"
-                        nav_status = "SEARCHING"
-                        ctrl_res = {
-                            "action": "stand", "cross_track_err": 0.0,
-                            "heading_err_deg": 0.0, "steering_deg": 0.0,
-                            "dist_to_goal": 0.0, "status": nav_status
-                        }
+                    front_blocked = False
+                    block_oid = None
+                    obs_dist = 0.0
 
                 # 5. Send Actuation Command to ESP32
                 self.esp32.set_action(action)
@@ -327,7 +367,12 @@ class VisionNavigatorNode:
         cv2.line(hud, (0, dy), (hud.shape[1], dy), (70, 70, 70), 1)
 
         action = ctrl_res["action"].upper()
-        act_color = (0, 255, 0) if action == "FORWARD" else (0, 200, 255) if action in ("LEFT", "RIGHT") else (0, 0, 255)
+        if ctrl_res.get("status", "").startswith("FRONT_OBS_AVOID"):
+            act_color = (0, 140, 255)
+            cv2.putText(hud, f"[!] OBSTACLE IN FRONT -> TURNING {action} TO AVOID", (260, 28),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 140, 255), 2, cv2.LINE_AA)
+        else:
+            act_color = (0, 255, 0) if action == "FORWARD" else (0, 200, 255) if action in ("LEFT", "RIGHT") else (0, 0, 255)
 
         hud_text = f"CMD: {action} | CTE: {ctrl_res['cross_track_err']:+.1f} cm | Steer: {ctrl_res['steering_deg']:+.0f} deg | Status: {ctrl_res['status']}"
         cv2.putText(hud, hud_text, (15, dy + 28), cv2.FONT_HERSHEY_SIMPLEX, 0.55, act_color, 2, cv2.LINE_AA)
@@ -468,7 +513,7 @@ def main():
     parser.add_argument("--height-cm", type=float, default=DEFAULT_ARENA_HEIGHT_CM, help="Arena height in cm")
     parser.add_argument("--headless", action="store_true", help="Run without GUI windows (for automated testing)")
     parser.add_argument("--max-frames", type=int, default=0, help="Maximum frames to process before exiting (0 = infinite)")
-    parser.add_argument("--disable-hand-detect", action="store_true", help="Disable pausing motion when human hand is in arena")
+    parser.add_argument("--enable-hand-detect", action="store_true", help="Enable pausing motion when human hand is in arena (Default: False)")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -480,7 +525,7 @@ def main():
         enable_ros2=args.ros2,
         headless=args.headless,
         max_frames=args.max_frames,
-        enable_hand_detect=not args.disable_hand_detect
+        enable_hand_detect=args.enable_hand_detect
     )
 
     node.run()
