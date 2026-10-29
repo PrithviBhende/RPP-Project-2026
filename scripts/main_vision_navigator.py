@@ -135,13 +135,14 @@ class VisionNavigatorNode:
         self.hand_cooldown_t0: float = 0.0
         self.running = True
 
-        # High-Speed Local UDP Telemetry Broadcaster (Streams to RViz Digital Twin on localhost and WSL)
+        # High-Speed Local UDP + Shared File Telemetry Broadcaster (Streams to RViz Digital Twin on localhost and WSL)
+        self.telemetry_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "telemetry.json")
         self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         wsl_ip = get_wsl_ip()
         self.udp_targets = [("127.0.0.1", 9090)]
         if wsl_ip != "127.0.0.1":
             self.udp_targets.append((wsl_ip, 9090))
-        print(f"[Navigator] RViz Telemetry Streaming to: {self.udp_targets}")
+        print(f"[Navigator] RViz Telemetry Streaming to: {self.udp_targets} & File IPC: {self.telemetry_path}")
 
         # Camera Capture Setup
         self.static_image = None
@@ -252,7 +253,7 @@ class VisionNavigatorNode:
                 # 5. Send Actuation Command to ESP32
                 self.esp32.set_action(action)
 
-                # 5b. Stream Telemetry to RViz Digital Twin Bridge over Localhost & WSL UDP
+                # 5b. Stream Telemetry to RViz Digital Twin Bridge (High-speed File IPC + UDP)
                 try:
                     packet = {
                         "robot_pose": [float(robot_pose[0]), float(robot_pose[1]), float(robot_pose[2])] if robot_pose else None,
@@ -262,6 +263,14 @@ class VisionNavigatorNode:
                         "goal": [float(goal_pos[0]), float(goal_pos[1])] if goal_pos else None
                     }
                     data_bytes = json.dumps(packet).encode('utf-8')
+
+                    # 1. Atomic file write for instant cross-platform Windows <-> WSL2 sync
+                    tmp_file = self.telemetry_path + ".tmp"
+                    with open(tmp_file, 'w') as f:
+                        f.write(json.dumps(packet))
+                    os.replace(tmp_file, self.telemetry_path)
+
+                    # 2. UDP socket broadcast
                     for target in self.udp_targets:
                         try:
                             self.udp_sock.sendto(data_bytes, target)

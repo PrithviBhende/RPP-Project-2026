@@ -29,3 +29,9 @@ ehthumbs.db
 *.step
 *.SLDASM
 *.f3z
+
+telemetry.json
+telemetry.json.tmp
+markers/cam_*.png
+markers/test_*.png
+markers/real_setup_nav_hud.png
