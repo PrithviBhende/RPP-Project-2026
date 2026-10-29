@@ -18,6 +18,7 @@ import math
 import time
 import urllib.request
 import threading
+import queue
 
 STANLEY_GAIN_K = 0.85          # Cross-track error scaling gain
 NOMINAL_VEL_CM_S = 3.8         # Quadruped nominal trot speed in cm/s
@@ -132,14 +133,25 @@ class StanleyController:
 
 
 class ESP32CommandBridge:
-    """Non-blocking Wi-Fi command transmitter to the physical ESP32."""
+    """
+    Non-blocking Wi-Fi command transmitter to the physical ESP32.
+    Implements Discrete Step-and-Assess Architecture:
+    - Sends individual calibrated pulses (0.35s) instead of continuous spamming.
+    - Configures ESP32 settings (/setSettings?walkCycles=1&frameDelay=80) to eliminate command accumulation.
+    - Robust HTTP socket management with 'Connection: close' and generous 1.2s timeout to prevent socket leaks and spurious disconnects.
+    """
 
     def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True):
         self.ip = esp32_ip
         self.enabled = enabled
         self.running = True
         self.connected = False
+        self.settings_configured = False
+        self.is_busy = False
+        self.last_rtt = 0.08  # Estimated round trip time in seconds
+        self.last_step_time = 0.0
         self.current_cmd = "stand"
+        self.cmd_queue: queue.Queue = queue.Queue(maxsize=3)
         self.lock = threading.Lock()
         self.status_msg = "Bridge Connecting..." if self.enabled else "Hardware Disabled (--no-esp32)"
 
@@ -147,60 +159,114 @@ class ESP32CommandBridge:
             self.thread = threading.Thread(target=self._worker_loop, daemon=True)
             self.thread.start()
 
+    def trigger_step(self, action: str, pulse_sec: float = 0.35) -> bool:
+        """
+        Requests execution of a single discrete movement step.
+        Returns True if accepted, False if bridge is busy executing another step.
+        """
+        if not self.enabled:
+            return True
+        with self.lock:
+            if self.is_busy:
+                return False
+            self.is_busy = True
+            self.current_cmd = action
+
+        try:
+            self.cmd_queue.put_nowait((action, pulse_sec))
+            return True
+        except queue.Full:
+            with self.lock:
+                self.is_busy = False
+            return False
+
     def set_action(self, action: str):
+        """Legacy helper for backward compatibility."""
         with self.lock:
             self.current_cmd = action
 
-    def _send_http_cmd(self, param: str, timeout: float = 0.25) -> bool:
+    def _send_raw_http(self, url: str, timeout: float = 1.2) -> bool:
         if not self.enabled:
             return False
-        url = f"http://{self.ip}/cmd?{param}"
+        t0 = time.time()
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Sesame-Stanley-Bridge'})
+            req = urllib.request.Request(
+                url,
+                headers={
+                    'User-Agent': 'Sesame-Stanley-Bridge',
+                    'Connection': 'close'  # Free lwIP socket immediately on ESP32
+                }
+            )
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 if response.status == 200:
+                    rtt = time.time() - t0
                     with self.lock:
                         self.connected = True
-                        self.status_msg = f"Connected ({param})"
+                        self.last_rtt = 0.8 * self.last_rtt + 0.2 * rtt
                     return True
         except Exception:
             with self.lock:
                 self.connected = False
                 self.status_msg = f"Searching http://{self.ip}..."
             return False
+        return False
+
+    def _send_http_cmd(self, param: str, timeout: float = 1.2) -> bool:
+        url = f"http://{self.ip}/cmd?{param}"
+        success = self._send_raw_http(url, timeout=timeout)
+        if success:
+            with self.lock:
+                self.status_msg = f"Connected ({param})"
+        return success
+
+    def _init_esp32_settings(self):
+        """Configures ESP32 firmware for single-cycle execution (walkCycles=1) to eliminate queue lag."""
+        url = f"http://{self.ip}/setSettings?walkCycles=1&frameDelay=80"
+        if self._send_raw_http(url, timeout=1.5):
+            self.settings_configured = True
 
     def _worker_loop(self):
-        last_sent = ""
         while self.running:
+            # 1. Ensure initial settings (walkCycles=1) are synced upon connection
+            if not self.settings_configured:
+                self._init_esp32_settings()
+                if not self.settings_configured:
+                    time.sleep(0.5)
+                    continue
+
+            # 2. Wait for next discrete step command
+            try:
+                cmd_item = self.cmd_queue.get(timeout=0.20)
+            except queue.Empty:
+                continue
+
+            action, pulse_sec = cmd_item
+
+            if action in ("stand", "stop"):
+                self._send_http_cmd("stop=1", timeout=1.0)
+                self._send_http_cmd("pose=stand", timeout=1.0)
+            elif action in ("forward", "backward", "left", "right"):
+                # Trigger movement pulse
+                self._send_http_cmd(f"go={action}", timeout=1.2)
+                # Allow physical execution for pulse duration
+                time.sleep(pulse_sec)
+                # Crisp stop & return to stand pose
+                self._send_http_cmd("stop=1", timeout=1.0)
+                self._send_http_cmd("pose=stand", timeout=1.0)
+
             with self.lock:
-                cmd = self.current_cmd
+                self.is_busy = False
+                self.last_step_time = time.time()
 
-            if cmd == "forward":
-                self._send_http_cmd("go=forward", timeout=0.30)
-            elif cmd == "left":
-                self._send_http_cmd("go=left", timeout=0.30)
-            elif cmd == "right":
-                self._send_http_cmd("go=right", timeout=0.30)
-            elif cmd == "backward":
-                self._send_http_cmd("go=backward", timeout=0.30)
-            elif cmd == "stand":
-                if last_sent != "stand":
-                    self._send_http_cmd("stop=1", timeout=0.20)
-                    self._send_http_cmd("pose=stand", timeout=0.20)
-            elif cmd == "stop":
-                if last_sent != "stop":
-                    self._send_http_cmd("stop=1", timeout=0.20)
-
-            last_sent = cmd
-            time.sleep(0.35)
+            self.cmd_queue.task_done()
 
     def stop_robot(self):
         """Emergency stop & level servos into stand pose."""
         self.running = False
         if self.enabled:
             try:
-                self._send_http_cmd("stop=1", timeout=0.20)
-                self._send_http_cmd("pose=stand", timeout=0.20)
+                self._send_http_cmd("stop=1", timeout=0.8)
+                self._send_http_cmd("pose=stand", timeout=0.8)
             except Exception:
                 pass
 

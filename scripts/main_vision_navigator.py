@@ -116,12 +116,18 @@ class VisionNavigatorNode:
     def __init__(self, source: str = "mock", width_cm: float = DEFAULT_ARENA_WIDTH_CM,
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
-                 max_frames: int = 0, enable_hand_detect: bool = False):
+                 max_frames: int = 0, enable_hand_detect: bool = False, latency: float = 0.5):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
         self.headless = headless
         self.max_frames = max_frames
+        self.base_latency = max(0.5, float(latency))
+        self.last_step_time = 0.0
+        self.last_action = "stand"
+        self.last_steer = 0.0
+        self.last_aligned = False
+        self.current_step_interval = self.base_latency
 
         # Subsystems
         self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
@@ -264,22 +270,31 @@ class VisionNavigatorNode:
 
                     # 4. Stanley Path Following Controller
                     ctrl_res = self.stanley.compute_control(robot_pose, self.current_path)
-                    action = ctrl_res["action"]
+                    steer_deg = ctrl_res["steering_deg"]
                     nav_status = ctrl_res["status"]
 
-                    # 5. Frontal Obstacle Collision Avoidance: Stop forward walking & turn to avoid!
+                    # 5. Check Alignment with Waypoint & Frontal Obstacle Clearance
+                    is_aligned = (abs(steer_deg) <= 12.0) and not front_blocked
+
                     if front_blocked and nav_status != "ARRIVED":
-                        # If robot is attempting to walk forward into the obstacle, STOP forward & TURN!
-                        if action == "forward":
-                            if abs(ctrl_res["steering_deg"]) > 5.0:
-                                action = "left" if ctrl_res["steering_deg"] > 0 else "right"
-                            else:
-                                action = turn_evade if turn_evade else "left"
-                        nav_status = f"FRONT_OBS_AVOID (Obs {block_oid} at {obs_dist:.1f}cm -> Turn {action.upper()})"
-                        ctrl_res["status"] = nav_status
-                        ctrl_res["action"] = action
+                        desired_action = turn_evade if turn_evade else ("left" if steer_deg > 0 else "right")
+                        nav_status = f"FRONT_OBS_AVOID (Obs {block_oid} at {obs_dist:.1f}cm -> Turn {desired_action.upper()})"
+                    elif nav_status == "ARRIVED":
+                        desired_action = "stand"
+                    elif is_aligned:
+                        desired_action = "forward"
+                        nav_status = "ALIGNED_FORWARD"
+                    elif steer_deg > 12.0:
+                        desired_action = "left"
+                        nav_status = f"ALIGN_LEFT ({steer_deg:+.0f} deg)"
+                    else:
+                        desired_action = "right"
+                        nav_status = f"ALIGN_RIGHT ({steer_deg:+.0f} deg)"
+
+                    ctrl_res["status"] = nav_status
+                    ctrl_res["action"] = desired_action
                 else:
-                    action = "stand"
+                    desired_action = "stand"
                     nav_status = "SEARCHING"
                     ctrl_res = {
                         "action": "stand", "cross_track_err": 0.0,
@@ -289,9 +304,42 @@ class VisionNavigatorNode:
                     front_blocked = False
                     block_oid = None
                     obs_dist = 0.0
+                    is_aligned = False
+                    steer_deg = 0.0
 
-                # 5. Send Actuation Command to ESP32
-                self.esp32.set_action(action)
+                # 6. Discrete Step-and-Assess Architecture:
+                # Interval = max(0.5s, camera_stream_latency, ESP32_RTT + 0.15s)
+                step_interval = max(0.5, self.base_latency, (self.esp32.last_rtt + 0.15) if self.esp32.connected else 0.5)
+                self.current_step_interval = step_interval
+                dt_since_step = now - self.last_step_time
+
+                if telemetry["arena_locked"] and robot_pose is not None and goal_pos is not None:
+                    if desired_action == "stand":
+                        action = "stand"
+                        if self.last_action != "stand":
+                            self.esp32.trigger_step("stand")
+                            self.last_action = "stand"
+                    else:
+                        # Only take physical step when step_interval has elapsed and bridge is not busy
+                        if dt_since_step >= step_interval and not self.esp32.is_busy:
+                            action = desired_action
+                            self.esp32.trigger_step(action, pulse_sec=0.35)
+                            self.last_step_time = now
+                            self.last_action = action
+                            self.last_steer = steer_deg
+                            self.last_aligned = is_aligned
+                            print(f"[Step-Assess] dt: {dt_since_step:.2f}s >= {step_interval:.2f}s | "
+                                  f"Aligned: {'YES' if is_aligned else 'NO'} (Steer: {steer_deg:+.1f} deg) -> "
+                                  f"Step {action.upper()} | CTE: {ctrl_res['cross_track_err']:+.1f} cm | "
+                                  f"ESP32: {self.esp32.status_msg}")
+                        else:
+                            # Step is currently running or waiting for camera stream to settle
+                            action = self.last_action if self.esp32.is_busy else "stand"
+                else:
+                    action = "stand"
+                    if self.last_action != "stand":
+                        self.esp32.trigger_step("stand")
+                        self.last_action = "stand"
 
                 # 5b. Stream Telemetry to RViz Digital Twin Bridge (High-speed File IPC + UDP)
                 try:
@@ -374,8 +422,9 @@ class VisionNavigatorNode:
         else:
             act_color = (0, 255, 0) if action == "FORWARD" else (0, 200, 255) if action in ("LEFT", "RIGHT") else (0, 0, 255)
 
-        hud_text = f"CMD: {action} | CTE: {ctrl_res['cross_track_err']:+.1f} cm | Steer: {ctrl_res['steering_deg']:+.0f} deg | Status: {ctrl_res['status']}"
-        cv2.putText(hud, hud_text, (15, dy + 28), cv2.FONT_HERSHEY_SIMPLEX, 0.55, act_color, 2, cv2.LINE_AA)
+        align_label = "YES" if abs(ctrl_res['steering_deg']) <= 12.0 else "NO"
+        hud_text = f"CMD: {action} | Align: {align_label} | CTE: {ctrl_res['cross_track_err']:+.1f} cm | Steer: {ctrl_res['steering_deg']:+.0f} deg | Step: {self.current_step_interval:.2f}s | Lat: {self.base_latency:.2f}s"
+        cv2.putText(hud, hud_text, (15, dy + 28), cv2.FONT_HERSHEY_SIMPLEX, 0.52, act_color, 2, cv2.LINE_AA)
 
         return hud
 
@@ -514,6 +563,8 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run without GUI windows (for automated testing)")
     parser.add_argument("--max-frames", type=int, default=0, help="Maximum frames to process before exiting (0 = infinite)")
     parser.add_argument("--enable-hand-detect", action="store_true", help="Enable pausing motion when human hand is in arena (Default: False)")
+    parser.add_argument("--latency", type=float, default=0.5,
+                        help="Camera stream latency in seconds (minimum 0.5s, default 0.5)")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -525,7 +576,8 @@ def main():
         enable_ros2=args.ros2,
         headless=args.headless,
         max_frames=args.max_frames,
-        enable_hand_detect=args.enable_hand_detect
+        enable_hand_detect=args.enable_hand_detect,
+        latency=args.latency
     )
 
     node.run()
