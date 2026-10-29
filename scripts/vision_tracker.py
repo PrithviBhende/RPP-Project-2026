@@ -120,14 +120,18 @@ class MetricArenaTransformer:
 class HandDetector:
     """Detects human hands entering the arena to pause navigation during object relocation."""
 
-    def __init__(self, min_area_px: int = 3500):
+    def __init__(self, min_area_px: int = 3500, enabled: bool = True):
         self.min_area_px = min_area_px
+        self.enabled = enabled
 
-        # HSV skin color range in typical indoor lighting
-        self.lower_skin = np.array([0, 38, 50], dtype=np.uint8)
-        self.upper_skin = np.array([22, 220, 255], dtype=np.uint8)
+        # Tuned HSV skin range: minimum Saturation 52 rejects cream/beige ceramic floor tiles
+        self.lower_skin = np.array([0, 52, 40], dtype=np.uint8)
+        self.upper_skin = np.array([25, 255, 255], dtype=np.uint8)
 
     def detect_in_arena(self, warped_frame: np.ndarray) -> tuple[bool, list[tuple[int, int, int, int]]]:
+        if not self.enabled:
+            return False, []
+
         hsv = cv2.cvtColor(warped_frame, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, self.lower_skin, self.upper_skin)
 
@@ -153,9 +157,10 @@ class HandDetector:
 class VisionTracker:
     """Primary vision tracking coordinator."""
 
-    def __init__(self, width_cm: float = DEFAULT_ARENA_WIDTH_CM, height_cm: float = DEFAULT_ARENA_HEIGHT_CM):
+    def __init__(self, width_cm: float = DEFAULT_ARENA_WIDTH_CM, height_cm: float = DEFAULT_ARENA_HEIGHT_CM,
+                 enable_hand_detect: bool = True):
         self.transformer = MetricArenaTransformer(width_cm, height_cm)
-        self.hand_detector = HandDetector()
+        self.hand_detector = HandDetector(enabled=enable_hand_detect)
 
         # Filtered state
         self.robot_x_cm: float | None = None

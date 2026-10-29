@@ -21,6 +21,7 @@ Integrates:
 """
 
 from __future__ import annotations
+import os
 import math
 import time
 import argparse
@@ -101,7 +102,7 @@ class VisionNavigatorNode:
     def __init__(self, source: str = "mock", width_cm: float = DEFAULT_ARENA_WIDTH_CM,
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
-                 max_frames: int = 0):
+                 max_frames: int = 0, enable_hand_detect: bool = True):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
@@ -109,7 +110,7 @@ class VisionNavigatorNode:
         self.max_frames = max_frames
 
         # Subsystems
-        self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm)
+        self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
         self.planner = VisionPathPlanner(arena_width_cm=width_cm, arena_height_cm=height_cm)
         self.stanley = StanleyController()
         self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32)
@@ -121,9 +122,14 @@ class VisionNavigatorNode:
         self.running = True
 
         # Camera Capture Setup
+        self.static_image = None
         if source.lower() == "mock":
             print("[Navigator] Using Synthetic Mock Camera feed.")
             self.cap = SyntheticMockCamera()
+        elif isinstance(source, str) and os.path.isfile(source) and source.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp')):
+            print(f"[Navigator] Loading Static Test Image: {source}")
+            self.static_image = cv2.imread(source)
+            self.cap = None
         elif source.isdigit():
             print(f"[Navigator] Opening USB Webcam index {source}...")
             self.cap = cv2.VideoCapture(int(source))
@@ -163,10 +169,14 @@ class VisionNavigatorNode:
 
         try:
             while self.running:
-                ret, frame = self.cap.read()
-                if not ret or frame is None:
-                    time.sleep(0.01)
-                    continue
+                if self.static_image is not None:
+                    ret, frame = True, self.static_image.copy()
+                    time.sleep(0.03)  # ~30 fps simulated loop
+                else:
+                    ret, frame = self.cap.read()
+                    if not ret or frame is None:
+                        time.sleep(0.01)
+                        continue
 
                 now = time.time()
                 dt = now - last_time
@@ -409,6 +419,7 @@ def main():
     parser.add_argument("--height-cm", type=float, default=DEFAULT_ARENA_HEIGHT_CM, help="Arena height in cm")
     parser.add_argument("--headless", action="store_true", help="Run without GUI windows (for automated testing)")
     parser.add_argument("--max-frames", type=int, default=0, help="Maximum frames to process before exiting (0 = infinite)")
+    parser.add_argument("--disable-hand-detect", action="store_true", help="Disable pausing motion when human hand is in arena")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -419,7 +430,8 @@ def main():
         enable_esp32=not args.no_esp32,
         enable_ros2=args.ros2,
         headless=args.headless,
-        max_frames=args.max_frames
+        max_frames=args.max_frames,
+        enable_hand_detect=not args.disable_hand_detect
     )
 
     node.run()
