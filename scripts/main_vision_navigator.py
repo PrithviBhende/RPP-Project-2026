@@ -26,9 +26,21 @@ import math
 import time
 import json
 import socket
+import subprocess
 import argparse
 import numpy as np
 import cv2
+
+
+def get_wsl_ip() -> str:
+    """Detects WSL2 virtual IP address so Windows can stream UDP telemetry directly to RViz in WSL."""
+    try:
+        res = subprocess.run(["wsl", "hostname", "-I"], capture_output=True, text=True, timeout=1.0)
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip().split()[0]
+    except Exception:
+        pass
+    return "127.0.0.1"
 
 # Import local subsystems
 from vision_tracker import (
@@ -123,9 +135,13 @@ class VisionNavigatorNode:
         self.hand_cooldown_t0: float = 0.0
         self.running = True
 
-        # High-Speed Local UDP Telemetry Broadcaster (Streams to RViz Digital Twin on localhost:9090)
+        # High-Speed Local UDP Telemetry Broadcaster (Streams to RViz Digital Twin on localhost and WSL)
         self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_target = ("127.0.0.1", 9090)
+        wsl_ip = get_wsl_ip()
+        self.udp_targets = [("127.0.0.1", 9090)]
+        if wsl_ip != "127.0.0.1":
+            self.udp_targets.append((wsl_ip, 9090))
+        print(f"[Navigator] RViz Telemetry Streaming to: {self.udp_targets}")
 
         # Camera Capture Setup
         self.static_image = None
@@ -236,7 +252,7 @@ class VisionNavigatorNode:
                 # 5. Send Actuation Command to ESP32
                 self.esp32.set_action(action)
 
-                # 5b. Stream Telemetry to RViz Digital Twin Bridge over Localhost UDP
+                # 5b. Stream Telemetry to RViz Digital Twin Bridge over Localhost & WSL UDP
                 try:
                     packet = {
                         "robot_pose": [float(robot_pose[0]), float(robot_pose[1]), float(robot_pose[2])] if robot_pose else None,
@@ -245,7 +261,12 @@ class VisionNavigatorNode:
                         "obstacles": {str(k): [float(v[0]), float(v[1])] for k, v in obstacles.items()},
                         "goal": [float(goal_pos[0]), float(goal_pos[1])] if goal_pos else None
                     }
-                    self.udp_sock.sendto(json.dumps(packet).encode('utf-8'), self.udp_target)
+                    data_bytes = json.dumps(packet).encode('utf-8')
+                    for target in self.udp_targets:
+                        try:
+                            self.udp_sock.sendto(data_bytes, target)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
