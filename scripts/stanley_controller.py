@@ -141,7 +141,7 @@ class ESP32CommandBridge:
         self.connected = False
         self.current_cmd = "stand"
         self.lock = threading.Lock()
-        self.status_msg = "Bridge Initializing"
+        self.status_msg = "Bridge Connecting..." if self.enabled else "Hardware Disabled (--no-esp32)"
 
         if self.enabled:
             self.thread = threading.Thread(target=self._worker_loop, daemon=True)
