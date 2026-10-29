@@ -24,6 +24,8 @@ from __future__ import annotations
 import os
 import math
 import time
+import json
+import socket
 import argparse
 import numpy as np
 import cv2
@@ -120,6 +122,10 @@ class VisionNavigatorNode:
         self.current_path: list[tuple[float, float]] = []
         self.hand_cooldown_t0: float = 0.0
         self.running = True
+
+        # High-Speed Local UDP Telemetry Broadcaster (Streams to RViz Digital Twin on localhost:9090)
+        self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_target = ("127.0.0.1", 9090)
 
         # Camera Capture Setup
         self.static_image = None
@@ -229,6 +235,19 @@ class VisionNavigatorNode:
 
                 # 5. Send Actuation Command to ESP32
                 self.esp32.set_action(action)
+
+                # 5b. Stream Telemetry to RViz Digital Twin Bridge over Localhost UDP
+                try:
+                    packet = {
+                        "robot_pose": [float(robot_pose[0]), float(robot_pose[1]), float(robot_pose[2])] if robot_pose else None,
+                        "action": action,
+                        "path": [[float(p[0]), float(p[1])] for p in self.current_path] if self.current_path else [],
+                        "obstacles": {str(k): [float(v[0]), float(v[1])] for k, v in obstacles.items()},
+                        "goal": [float(goal_pos[0]), float(goal_pos[1])] if goal_pos else None
+                    }
+                    self.udp_sock.sendto(json.dumps(packet).encode('utf-8'), self.udp_target)
+                except Exception:
+                    pass
 
                 # 6. Publish to ROS 2 RViz Digital Twin
                 if self.ros_node:

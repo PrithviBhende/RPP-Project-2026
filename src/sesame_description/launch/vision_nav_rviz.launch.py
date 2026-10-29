@@ -1,6 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -20,6 +21,14 @@ def generate_launch_description():
         parameters=[{'robot_description': robot_desc}]
     )
 
+    # RViz Bridge Node publishes TF map -> base_footprint, /joint_states, /plan_path, and /obstacle_markers
+    bridge_script = '/mnt/c/Users/prith/Documents/MYSPACE/RPP-Project-2026/scripts/rviz_bridge_node.py'
+    bridge_process = ExecuteProcess(
+        cmd=['python3', bridge_script],
+        name='rviz_bridge_node',
+        output='screen'
+    )
+
     # RViz2 configured with Fixed Frame: map, Planned Path, Obstacle Markers, and RobotModel
     rviz_node = Node(
         package='rviz2',
@@ -31,5 +40,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         robot_state_publisher_node,
+        bridge_process,
         rviz_node
     ])
