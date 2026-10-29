@@ -116,18 +116,26 @@ class VisionNavigatorNode:
     def __init__(self, source: str = "mock", width_cm: float = DEFAULT_ARENA_WIDTH_CM,
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
-                 max_frames: int = 0, enable_hand_detect: bool = True):
+                 max_frames: int = 0, enable_hand_detect: bool = False,
+                 invert_fwd_bwd: bool = True, invert_left_right: bool = True):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
         self.headless = headless
         self.max_frames = max_frames
+        self.invert_fwd_bwd = invert_fwd_bwd
+        self.invert_left_right = invert_left_right
 
         # Subsystems
         self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
         self.planner = VisionPathPlanner(arena_width_cm=width_cm, arena_height_cm=height_cm)
         self.stanley = StanleyController()
-        self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32)
+        self.esp32 = ESP32CommandBridge(
+            esp32_ip=esp32_ip,
+            enabled=enable_esp32,
+            invert_fwd_bwd=invert_fwd_bwd,
+            invert_left_right=invert_left_right
+        )
         self.cpg = CPGGaitGenerator()
 
         # State
@@ -219,6 +227,10 @@ class VisionNavigatorNode:
         print("Hardware:     ESP32 ({}) | RViz Digital Twin: {}".format(
             self.esp32.status_msg if self.esp32.enabled else "Disabled",
             "Active" if self.ros_node else "Off"
+        ))
+        print("Actuation:    Inverted Mode Active [Steering L<->R: {}, Fwd<->Bwd: {}]".format(
+            "Yes" if self.invert_left_right else "No",
+            "Yes" if self.invert_fwd_bwd else "No"
         ))
         print("Controls:     Press 'q' or 'ESC' in HUD window to quit.")
         print("=" * 75 + "\n")
@@ -514,6 +526,8 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run without GUI windows (for automated testing)")
     parser.add_argument("--max-frames", type=int, default=0, help="Maximum frames to process before exiting (0 = infinite)")
     parser.add_argument("--enable-hand-detect", action="store_true", help="Enable pausing motion when human hand is in arena (Default: False)")
+    parser.add_argument("--no-invert-steering", action="store_true", help="Disable Left <-> Right command inversion for ESP32")
+    parser.add_argument("--no-invert-fwd-bwd", action="store_true", help="Disable Forward <-> Backward command inversion for ESP32")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -525,7 +539,9 @@ def main():
         enable_ros2=args.ros2,
         headless=args.headless,
         max_frames=args.max_frames,
-        enable_hand_detect=args.enable_hand_detect
+        enable_hand_detect=args.enable_hand_detect,
+        invert_fwd_bwd=not args.no_invert_fwd_bwd,
+        invert_left_right=not args.no_invert_steering
     )
 
     node.run()
