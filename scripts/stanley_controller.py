@@ -75,6 +75,11 @@ class StanleyController:
                 "status": "ARRIVED"
             }
 
+        # Check if path changed: reset waypoint index
+        if path != getattr(self, '_last_path', None):
+            self._last_path = list(path)
+            self.current_wp_idx = 0
+
         # Advance waypoint index if close to current target waypoint
         if self.current_wp_idx < len(path) - 1:
             curr_target = path[self.current_wp_idx]
@@ -91,26 +96,30 @@ class StanleyController:
         seg_dy = pb[1] - pa[1]
         seg_len = math.hypot(seg_dx, seg_dy)
 
+        # 1. Direct Target Waypoint Heading (Pure Pursuit Line-of-Sight)
+        target_dx = pb[0] - rx
+        target_dy = pb[1] - ry
+        target_bearing = math.atan2(target_dy, target_dx)
+        target_heading_err = normalize_angle_rad(target_bearing - r_th)
+
+        # 2. Signed Cross-Track Error relative to segment (positive = left of path)
         if seg_len < 1e-4:
             path_heading = r_th
             cross_track_err = 0.0
         else:
             path_heading = math.atan2(seg_dy, seg_dx)
-            # Normal vector to path (+90 deg left)
             nx = -seg_dy / seg_len
             ny = seg_dx / seg_len
-            # Signed distance from segment line to robot (positive = robot is to the left of path)
             cross_track_err = (rx - pa[0]) * nx + (ry - pa[1]) * ny
 
-        # 1. Heading Error: theta_p - theta_r
-        heading_err = normalize_angle_rad(path_heading - r_th)
+        # 3. Soft Cross-Track Correction with Clamping (+/- 20 deg max)
+        # Prevents violent over-steering and endless S-curve oscillations
+        raw_crosstrack = math.atan2(-self.k_gain * cross_track_err, self.speed + 0.1)
+        max_cte_rad = math.radians(20.0)
+        clamped_crosstrack = max(-max_cte_rad, min(max_cte_rad, raw_crosstrack))
 
-        # 2. Cross-Track Correction: arctan( -k * e / v )
-        # If robot is to the LEFT (e > 0), steer RIGHT (negative angle) to correct
-        crosstrack_steer = math.atan2(-self.k_gain * cross_track_err, self.speed + 0.1)
-
-        # Total Stanley Steering Angle
-        total_steer = normalize_angle_rad(heading_err + crosstrack_steer)
+        # Total Steering Angle: Pure Pursuit Target Bearing + Gentle Bounded CTE Pull
+        total_steer = normalize_angle_rad(target_heading_err + 0.35 * clamped_crosstrack)
         steer_deg = math.degrees(total_steer)
 
         # Map to Quadruped Locomotion Commands
@@ -124,7 +133,7 @@ class StanleyController:
         return {
             "action": action,
             "cross_track_err": cross_track_err,
-            "heading_err_deg": math.degrees(heading_err),
+            "heading_err_deg": math.degrees(target_heading_err),
             "steering_deg": steer_deg,
             "dist_to_goal": dist_to_goal,
             "status": "TRACKING",
