@@ -41,7 +41,7 @@ class StanleyController:
     def __init__(self, k_gain: float = STANLEY_GAIN_K, speed_cm_s: float = NOMINAL_VEL_CM_S):
         self.k_gain = k_gain
         self.speed = speed_cm_s
-        self.current_wp_idx = 0
+        self.target_wp_idx = 1
 
     def compute_control(self, robot_pose: tuple[float, float, float],
                         path: list[tuple[float, float]]) -> dict:
@@ -75,20 +75,20 @@ class StanleyController:
                 "status": "ARRIVED"
             }
 
-        # Check if path changed: reset waypoint index
+        # Check if path changed: reset target waypoint index
         if path != getattr(self, '_last_path', None):
             self._last_path = list(path)
-            self.current_wp_idx = 0
+            self.target_wp_idx = 1
 
         # Advance waypoint index if close to current target waypoint
-        if self.current_wp_idx < len(path) - 1:
-            curr_target = path[self.current_wp_idx]
+        if len(path) > 2 and self.target_wp_idx < len(path) - 1:
+            curr_target = path[self.target_wp_idx]
             if math.hypot(curr_target[0] - rx, curr_target[1] - ry) < 8.0:
-                self.current_wp_idx += 1
+                self.target_wp_idx += 1
 
-        # Use current path segment: P_a -> P_b
-        idx_a = min(self.current_wp_idx, len(path) - 2)
-        idx_b = idx_a + 1
+        # Use active path segment: P_a -> P_b
+        idx_b = min(max(1, self.target_wp_idx), len(path) - 1)
+        idx_a = max(0, idx_b - 1)
         pa = path[idx_a]
         pb = path[idx_b]
 
@@ -150,10 +150,12 @@ class ESP32CommandBridge:
     - Robust HTTP socket management with 'Connection: close' and generous 1.2s timeout to prevent socket leaks and spurious disconnects.
     """
 
-    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True, invert_fwd_bwd: bool = False):
+    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True,
+                 invert_fwd_bwd: bool = False, invert_turn: bool = False):
         self.ip = esp32_ip
         self.enabled = enabled
         self.invert_fwd_bwd = invert_fwd_bwd
+        self.invert_turn = invert_turn
         self.running = True
         self.connected = False
         self.settings_configured = False
@@ -263,6 +265,12 @@ class ESP32CommandBridge:
                         send_act = "backward"
                     elif action == "backward":
                         send_act = "forward"
+                # Handle steering inversion if physical robot turns opposite to intended
+                if self.invert_turn:
+                    if action == "left":
+                        send_act = "right"
+                    elif action == "right":
+                        send_act = "left"
                 # Trigger movement pulse
                 self._send_http_cmd(f"go={send_act}", timeout=1.2)
                 # Allow physical execution for pulse duration

@@ -117,7 +117,7 @@ class VisionNavigatorNode:
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
                  max_frames: int = 0, enable_hand_detect: bool = False, latency: float = 0.5,
-                 invert_fwd: bool = False):
+                 invert_fwd: bool = False, invert_turn: bool = False):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
@@ -134,7 +134,8 @@ class VisionNavigatorNode:
         self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
         self.planner = VisionPathPlanner(arena_width_cm=width_cm, arena_height_cm=height_cm)
         self.stanley = StanleyController()
-        self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32, invert_fwd_bwd=invert_fwd)
+        self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32,
+                                        invert_fwd_bwd=invert_fwd, invert_turn=invert_turn)
         self.cpg = CPGGaitGenerator()
 
         # State
@@ -568,6 +569,8 @@ def main():
                         help="Camera stream latency in seconds (minimum 0.5s, default 0.5)")
     parser.add_argument("--invert-fwd", action="store_true",
                         help="Invert forward/backward actuation if physical robot walks in reverse")
+    parser.add_argument("--invert-turn", action="store_true",
+                        help="Invert steering direction (left <-> right) for the physical ESP32")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -581,7 +584,8 @@ def main():
         max_frames=args.max_frames,
         enable_hand_detect=args.enable_hand_detect,
         latency=args.latency,
-        invert_fwd=args.invert_fwd
+        invert_fwd=args.invert_fwd,
+        invert_turn=args.invert_turn
     )
 
     node.run()
