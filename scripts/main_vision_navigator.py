@@ -116,7 +116,8 @@ class VisionNavigatorNode:
     def __init__(self, source: str = "mock", width_cm: float = DEFAULT_ARENA_WIDTH_CM,
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
-                 max_frames: int = 0, enable_hand_detect: bool = False, latency: float = 0.5):
+                 max_frames: int = 0, enable_hand_detect: bool = False, latency: float = 0.5,
+                 invert_fwd: bool = False):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
@@ -133,7 +134,7 @@ class VisionNavigatorNode:
         self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
         self.planner = VisionPathPlanner(arena_width_cm=width_cm, arena_height_cm=height_cm)
         self.stanley = StanleyController()
-        self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32)
+        self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32, invert_fwd_bwd=invert_fwd)
         self.cpg = CPGGaitGenerator()
 
         # State
@@ -308,8 +309,8 @@ class VisionNavigatorNode:
                     steer_deg = 0.0
 
                 # 6. Discrete Step-and-Assess Architecture:
-                # Interval = max(0.5s, camera_stream_latency, ESP32_RTT + 0.15s)
-                step_interval = max(0.5, self.base_latency, (self.esp32.last_rtt + 0.15) if self.esp32.connected else 0.5)
+                # Interval = max(0.65s, camera_stream_latency, ESP32_RTT + 0.15s)
+                step_interval = max(0.65, self.base_latency, (self.esp32.last_rtt + 0.15) if self.esp32.connected else 0.65)
                 self.current_step_interval = step_interval
                 dt_since_step = now - self.last_step_time
 
@@ -323,7 +324,7 @@ class VisionNavigatorNode:
                         # Only take physical step when step_interval has elapsed and bridge is not busy
                         if dt_since_step >= step_interval and not self.esp32.is_busy:
                             action = desired_action
-                            self.esp32.trigger_step(action, pulse_sec=0.35)
+                            self.esp32.trigger_step(action, pulse_sec=0.65)
                             self.last_step_time = now
                             self.last_action = action
                             self.last_steer = steer_deg
@@ -565,6 +566,8 @@ def main():
     parser.add_argument("--enable-hand-detect", action="store_true", help="Enable pausing motion when human hand is in arena (Default: False)")
     parser.add_argument("--latency", type=float, default=0.5,
                         help="Camera stream latency in seconds (minimum 0.5s, default 0.5)")
+    parser.add_argument("--invert-fwd", action="store_true",
+                        help="Invert forward/backward actuation if physical robot walks in reverse")
     args = parser.parse_args()
 
     node = VisionNavigatorNode(
@@ -577,7 +580,8 @@ def main():
         headless=args.headless,
         max_frames=args.max_frames,
         enable_hand_detect=args.enable_hand_detect,
-        latency=args.latency
+        latency=args.latency,
+        invert_fwd=args.invert_fwd
     )
 
     node.run()

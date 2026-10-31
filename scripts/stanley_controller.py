@@ -150,9 +150,10 @@ class ESP32CommandBridge:
     - Robust HTTP socket management with 'Connection: close' and generous 1.2s timeout to prevent socket leaks and spurious disconnects.
     """
 
-    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True):
+    def __init__(self, esp32_ip: str = "192.168.4.1", enabled: bool = True, invert_fwd_bwd: bool = False):
         self.ip = esp32_ip
         self.enabled = enabled
+        self.invert_fwd_bwd = invert_fwd_bwd
         self.running = True
         self.connected = False
         self.settings_configured = False
@@ -168,7 +169,7 @@ class ESP32CommandBridge:
             self.thread = threading.Thread(target=self._worker_loop, daemon=True)
             self.thread.start()
 
-    def trigger_step(self, action: str, pulse_sec: float = 0.35) -> bool:
+    def trigger_step(self, action: str, pulse_sec: float = 0.65) -> bool:
         """
         Requests execution of a single discrete movement step.
         Returns True if accepted, False if bridge is busy executing another step.
@@ -255,8 +256,15 @@ class ESP32CommandBridge:
                 self._send_http_cmd("stop=1", timeout=1.0)
                 self._send_http_cmd("pose=stand", timeout=1.0)
             elif action in ("forward", "backward", "left", "right"):
+                # Handle forward/backward inversion if hardware moves in reverse
+                send_act = action
+                if self.invert_fwd_bwd:
+                    if action == "forward":
+                        send_act = "backward"
+                    elif action == "backward":
+                        send_act = "forward"
                 # Trigger movement pulse
-                self._send_http_cmd(f"go={action}", timeout=1.2)
+                self._send_http_cmd(f"go={send_act}", timeout=1.2)
                 # Allow physical execution for pulse duration
                 time.sleep(pulse_sec)
                 # Crisp stop & return to stand pose

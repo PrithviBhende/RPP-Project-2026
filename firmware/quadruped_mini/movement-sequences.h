@@ -69,29 +69,29 @@ void runTurnRight();
 
 // ====== POSES ======
 inline void runRestPose() { 
-  Serial.println(F("REST")); 
+  Serial.println(F("REST (Canonical 90deg)")); 
   setFaceWithMode("rest", FACE_ANIM_BOOMERANG); 
-  setServoAngle(R1, 78);
-  setServoAngle(R2, 80);
-  setServoAngle(L1, 98);
-  setServoAngle(L2, 80);
+  setServoAngle(R1, 90);
+  setServoAngle(R2, 90);
+  setServoAngle(L1, 90);
+  setServoAngle(L2, 90);
   setServoAngle(R4, 90);
-  setServoAngle(R3, 84);
-  setServoAngle(L3, 80);
-  setServoAngle(L4, 77);
+  setServoAngle(R3, 90);
+  setServoAngle(L3, 90);
+  setServoAngle(L4, 90);
 }
 
 inline void runStandPose(int face) { 
-  Serial.println(F("STAND")); 
+  Serial.println(F("STAND (Canonical)")); 
   if (face == 1) setFaceWithMode("stand", FACE_ANIM_ONCE); 
-  setServoAngle(R1, 115); 
-  setServoAngle(R2, 50); 
-  setServoAngle(L1, 65); 
-  setServoAngle(L2, 110); 
-  setServoAngle(R4, 20); 
-  setServoAngle(R3, 156); 
-  setServoAngle(L3, 10); 
-  setServoAngle(L4, 150); 
+  setServoAngle(R1, 135); 
+  setServoAngle(R2, 45); 
+  setServoAngle(L1, 45); 
+  setServoAngle(L2, 135); 
+  setServoAngle(R4, 0); 
+  setServoAngle(R3, 180); 
+  setServoAngle(L3, 0); 
+  setServoAngle(L4, 180); 
   if (face == 1) enterIdle();
 }
 
@@ -341,108 +341,151 @@ inline void runCrabPose() {
   if (currentCommand == "crab") currentCommand = "";
 }
 
-// --- MOVEMENT ANIMATIONS ---
+// --- CANONICAL MOVEMENT ANIMATIONS (Official Kinematics & Stance Floor Grounding) ---
+// Base Stand: R1=135, R2=45, L1=45, L2=135, R4=0, R3=180, L3=0, L4=180
+// Stance feet: R3=180, L4=180, R4=0, L3=0 (planted flat on floor at z = 0).
+// Swing feet: R3=140, L4=140, R4=40, L3=40 (lifted 40 deg in air).
+
 inline void runWalkPose() {
-  Serial.println(F("WALK FWD"));
+  Serial.println(F("WALK FWD (Canonical)"));
   setFaceWithMode("walk", FACE_ANIM_ONCE);
-  // Initial Step
-  setServoAngle(R3, 120); setServoAngle(L3, 45);
-  setServoAngle(R2, 87); setServoAngle(L1, 51);
-  if (!pressingCheck("forward", frameDelay)) return;
-  
+
   for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R3, 120); setServoAngle(L3, 10);
+    // --- Phase 1: Lift Pair 1 (FR: R1/R3 + RL: L2/L4), Pair 2 (FL + RR) on floor ---
+    setServoAngle(R3, 140); setServoAngle(L4, 140); // Lift Pair 1 knees
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);   // Pair 2 knees planted on floor
     if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(L4, 113); setServoAngle(L2, 80);
-    setServoAngle(R4, 20); setServoAngle(R1, 152);
-    if (!pressingCheck("forward", frameDelay)) return;    
-    setServoAngle(R2, 50); setServoAngle(L1, 98);
+
+    // Swing Pair 1 forward in air; push Pair 2 backward on ground to propel body forward
+    setServoAngle(R1, 110); setServoAngle(L2, 110); // Swing forward
+    setServoAngle(L1, 20);  setServoAngle(R2, 20);  // Push backward on floor
     if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(R4, 55); setServoAngle(L4, 150);
+
+    // Touchdown Pair 1 firmly on floor
+    setServoAngle(R3, 180); setServoAngle(L4, 180);
     if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(R3, 156); setServoAngle(L3, 45);
-    setServoAngle(R2, 80); setServoAngle(L1, 32);
-    if (!pressingCheck("forward", frameDelay)) return;  
-    setServoAngle(L2, 110); setServoAngle(R1, 78);
+
+    // --- Phase 2: Lift Pair 2 (FL: L1/L3 + RR: R2/R4), Pair 1 (FR + RL) on floor ---
+    setServoAngle(R4, 40);  setServoAngle(L3, 40);  // Lift Pair 2 knees
+    setServoAngle(R3, 180); setServoAngle(L4, 180); // Pair 1 knees planted on floor
+    if (!pressingCheck("forward", frameDelay)) return;
+
+    // Swing Pair 2 forward in air; push Pair 1 backward on ground to propel body forward
+    setServoAngle(L1, 70);  setServoAngle(R2, 70);  // Swing forward
+    setServoAngle(R1, 160); setServoAngle(L2, 160); // Push backward on floor
+    if (!pressingCheck("forward", frameDelay)) return;
+
+    // Touchdown Pair 2 firmly on floor
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);
     if (!pressingCheck("forward", frameDelay)) return;
   }
   runStandPose(1);
+  if (currentCommand == "forward") currentCommand = "";
 }
 
-// Logic reversed from Walk
 inline void runWalkBackward() {
-  Serial.println(F("WALK BACK"));
+  Serial.println(F("WALK BACK (Canonical)"));
   setFaceWithMode("walk", FACE_ANIM_ONCE);
-  if (!pressingCheck("backward", frameDelay)) return;
-  
+
   for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R3, 120); setServoAngle(L3, 10);
+    // --- Phase 1: Lift Pair 1, swing backward in air; push Pair 2 forward on floor ---
+    setServoAngle(R3, 140); setServoAngle(L4, 140);
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);
     if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(L4, 113); setServoAngle(L2, 110);
-    setServoAngle(R4, 20); setServoAngle(R1, 78);
-    if (!pressingCheck("backward", frameDelay)) return;    
-    setServoAngle(R2, 80); setServoAngle(L1, 32);
+
+    setServoAngle(R1, 160); setServoAngle(L2, 160); // Swing backward in air
+    setServoAngle(L1, 70);  setServoAngle(R2, 70);  // Push forward on floor
     if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(R4, 55); setServoAngle(L4, 150);
+
+    setServoAngle(R3, 180); setServoAngle(L4, 180); // Plant on floor
     if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(R3, 156); setServoAngle(L3, 45);
-    setServoAngle(R2, 50); setServoAngle(L1, 98);
-    if (!pressingCheck("backward", frameDelay)) return;  
-    setServoAngle(L2, 80); setServoAngle(R1, 152);
+
+    // --- Phase 2: Lift Pair 2, swing backward in air; push Pair 1 forward on floor ---
+    setServoAngle(R4, 40);  setServoAngle(L3, 40);
+    setServoAngle(R3, 180); setServoAngle(L4, 180);
+    if (!pressingCheck("backward", frameDelay)) return;
+
+    setServoAngle(L1, 20);  setServoAngle(R2, 20);  // Swing backward in air
+    setServoAngle(R1, 110); setServoAngle(L2, 110); // Push forward on floor
+    if (!pressingCheck("backward", frameDelay)) return;
+
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);   // Plant on floor
     if (!pressingCheck("backward", frameDelay)) return;
   }
   runStandPose(1);
+  if (currentCommand == "backward") currentCommand = "";
 }
 
-// Simple turn logic
 inline void runTurnLeft() {
-  Serial.println(F("TURN LEFT"));
+  Serial.println(F("TURN LEFT (Canonical Floor Grounded)"));
   setFaceWithMode("walk", FACE_ANIM_ONCE);
+
   for (int i = 0; i < walkCycles; i++) {
-    //legset 1 (R1 L2)
-    setServoAngle(R3, 120); setServoAngle(L4, 113); 
+    // --- Phase 1: Lift Pair 1 (R1/R3 + L2/L4). Stance Pair 2 (R4=0, L3=0) locked on floor! ---
+    setServoAngle(R3, 140); setServoAngle(L4, 140); // Lift Pair 1
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);   // Ensure Pair 2 flat on floor
     if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R1, 152); setServoAngle(L2, 140); 
+
+    // Right leg forward, Left leg backward
+    setServoAngle(R1, 110); setServoAngle(L2, 160); // In air: FR forward, RL backward
+    setServoAngle(R2, 20);  setServoAngle(L1, 70);  // On ground: RR pushes, FL pushes
     if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R3, 156); setServoAngle(L4, 150); 
+
+    // Touchdown Pair 1 on floor!
+    setServoAngle(R3, 180); setServoAngle(L4, 180);
     if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R1, 115); setServoAngle(L2, 110);
+
+    // --- Phase 2: Lift Pair 2 (R2/R4 + L1/L3). Stance Pair 1 (R3=180, L4=180) locked on floor! ---
+    setServoAngle(R4, 40);  setServoAngle(L3, 40);  // Lift Pair 2
+    setServoAngle(R3, 180); setServoAngle(L4, 180); // Ensure Pair 1 flat on floor
     if (!pressingCheck("left", frameDelay)) return;
-      //legset 2 (R2 L1)
-    setServoAngle(R4, 55); setServoAngle(L3, 45); 
+
+    // Right leg forward, Left leg backward
+    setServoAngle(R2, 70);  setServoAngle(L1, 20);  // In air: RR forward, FL backward
+    setServoAngle(R1, 160); setServoAngle(L2, 110); // On ground: FR pushes, RL pushes
     if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R2, 80); setServoAngle(L1, 98); 
+
+    // Touchdown Pair 2 on floor!
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);
     if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R4, 20); setServoAngle(L3, 10); 
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R2, 50); setServoAngle(L1, 65);
-    if (!pressingCheck("left", frameDelay)) return;  
   }
   runStandPose(1);
+  if (currentCommand == "left") currentCommand = "";
 }
 
 inline void runTurnRight() {
-  Serial.println(F("TURN RIGHT"));
+  Serial.println(F("TURN RIGHT (Canonical Floor Grounded)"));
   setFaceWithMode("walk", FACE_ANIM_ONCE);
+
   for (int i = 0; i < walkCycles; i++) {
-    //legset 2 (R2 L1)
-    setServoAngle(R4, 55); setServoAngle(L3, 45); 
+    // --- Phase 1: Lift Pair 1 (R1/R3 + L2/L4). Stance Pair 2 (R4=0, L3=0) locked on floor! ---
+    setServoAngle(R3, 140); setServoAngle(L4, 140); // Lift Pair 1
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);   // Ensure Pair 2 flat on floor
     if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R2, 20); setServoAngle(L1, 32); 
+
+    // Right leg backward, Left leg forward
+    setServoAngle(R1, 160); setServoAngle(L2, 110); // In air: FR backward, RL forward
+    setServoAngle(R2, 70);  setServoAngle(L1, 20);  // On ground: RR pushes, FL pushes
     if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R4, 20); setServoAngle(L3, 10); 
+
+    // Touchdown Pair 1 on floor!
+    setServoAngle(R3, 180); setServoAngle(L4, 180);
     if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R2, 50); setServoAngle(L1, 65);
-    if (!pressingCheck("right", frameDelay)) return;  
-    //legset 1 (R1 L2)
-    setServoAngle(R3, 120); setServoAngle(L4, 113); 
+
+    // --- Phase 2: Lift Pair 2 (R2/R4 + L1/L3). Stance Pair 1 (R3=180, L4=180) locked on floor! ---
+    setServoAngle(R4, 40);  setServoAngle(L3, 40);  // Lift Pair 2
+    setServoAngle(R3, 180); setServoAngle(L4, 180); // Ensure Pair 1 flat on floor
     if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R1, 78); setServoAngle(L2, 80); 
+
+    // Right leg backward, Left leg forward
+    setServoAngle(R2, 20);  setServoAngle(L1, 70);  // In air: RR backward, FL forward
+    setServoAngle(R1, 110); setServoAngle(L2, 160); // On ground: FR pushes, RL pushes
     if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R3, 156); setServoAngle(L4, 150); 
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R1, 115); setServoAngle(L2, 110);
+
+    // Touchdown Pair 2 on floor!
+    setServoAngle(R4, 0);   setServoAngle(L3, 0);
     if (!pressingCheck("right", frameDelay)) return;
   }
   runStandPose(1);
+  if (currentCommand == "right") currentCommand = "";
 }
