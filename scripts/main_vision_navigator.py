@@ -164,8 +164,12 @@ class VisionNavigatorNode:
             self.static_image = cv2.imread(source)
             self.cap = None
         elif source.isdigit():
-            print(f"[Navigator] Opening USB Webcam index {source}...")
-            self.cap = cv2.VideoCapture(int(source))
+            idx = int(source)
+            print(f"[Navigator] Opening USB Webcam index {idx}...")
+            # Use DirectShow on Windows for fast startup, fallback to default backend
+            self.cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW) if sys.platform.startswith("win") else cv2.VideoCapture(idx)
+            if not self.cap.isOpened():
+                self.cap = cv2.VideoCapture(idx)
         else:
             print(f"[Navigator] Opening IP Camera Stream {source}...")
             self.cap = cv2.VideoCapture(source)
