@@ -81,7 +81,7 @@ inline void runRestPose() {
   setServoAngle(L4, 83);
 }
 
-inline void runStandPose(int face = 1) { 
+inline void runStandPose(int face) { 
   Serial.println(F("STAND (Calibrated)")); 
   if (face == 1) setFaceWithMode("stand", FACE_ANIM_ONCE); 
   setServoAngle(R1, 104); 
