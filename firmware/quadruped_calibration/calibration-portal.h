@@ -210,7 +210,7 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
             <div class="leg-card">
                 <div class="leg-header">
                     <span>FRONT RIGHT (FR) LEG</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">Pins 15 & 4</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Pins 15 & 16</span>
                 </div>
 
                 <!-- R1: FR Hip -->
@@ -235,25 +235,25 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
                     </div>
                 </div>
 
-                <!-- R4: FR Knee -->
-                <div class="motor-control" id="ctrl-R4">
+                <!-- R3: FR Knee -->
+                <div class="motor-control" id="ctrl-R3">
                     <div class="motor-header">
-                        <div><span class="motor-name">R4 (FR Knee)</span><span class="motor-pin">GPIO 4</span></div>
-                        <span class="angle-badge" id="val-R4">90°</span>
+                        <div><span class="motor-name">R3 (FR Knee)</span><span class="motor-pin">GPIO 16</span></div>
+                        <span class="angle-badge" id="val-R3">90°</span>
                     </div>
                     <div class="slider-wrapper">
-                        <input type="range" id="slider-R4" min="0" max="180" value="90"
-                               oninput="onSliderDrag('R4', this.value)"
-                               onchange="setMotorAngle('R4', this.value)">
+                        <input type="range" id="slider-R3" min="0" max="180" value="90"
+                               oninput="onSliderDrag('R3', this.value)"
+                               onchange="setMotorAngle('R3', this.value)">
                     </div>
                     <div class="btn-row">
-                        <button class="btn-preset btn-preset-zero" onclick="setMotorAngle('R4', 0)">0°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R4', 45)">45°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R4', 90)">90°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R4', 135)">135°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R4', 180)">180°</button>
-                        <button class="btn-step" onclick="stepMotor('R4', -1)">-1°</button>
-                        <button class="btn-step" onclick="stepMotor('R4', 1)">+1°</button>
+                        <button class="btn-preset btn-preset-zero" onclick="setMotorAngle('R3', 0)">0°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R3', 45)">45°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R3', 90)">90°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R3', 135)">135°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R3', 180)">180°</button>
+                        <button class="btn-step" onclick="stepMotor('R3', -1)">-1°</button>
+                        <button class="btn-step" onclick="stepMotor('R3', 1)">+1°</button>
                     </div>
                 </div>
             </div>
@@ -314,7 +314,7 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
             <div class="leg-card">
                 <div class="leg-header">
                     <span>BACK RIGHT (RR) LEG</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">Pins 2 & 16</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Pins 2 & 4</span>
                 </div>
 
                 <!-- R2: RR Hip -->
@@ -339,25 +339,25 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
                     </div>
                 </div>
 
-                <!-- R3: RR Knee -->
-                <div class="motor-control" id="ctrl-R3">
+                <!-- R4: RR Knee -->
+                <div class="motor-control" id="ctrl-R4">
                     <div class="motor-header">
-                        <div><span class="motor-name">R3 (RR Knee)</span><span class="motor-pin">GPIO 16</span></div>
-                        <span class="angle-badge" id="val-R3">90°</span>
+                        <div><span class="motor-name">R4 (RR Knee)</span><span class="motor-pin">GPIO 4</span></div>
+                        <span class="angle-badge" id="val-R4">90°</span>
                     </div>
                     <div class="slider-wrapper">
-                        <input type="range" id="slider-R3" min="0" max="180" value="90"
-                               oninput="onSliderDrag('R3', this.value)"
-                               onchange="setMotorAngle('R3', this.value)">
+                        <input type="range" id="slider-R4" min="0" max="180" value="90"
+                               oninput="onSliderDrag('R4', this.value)"
+                               onchange="setMotorAngle('R4', this.value)">
                     </div>
                     <div class="btn-row">
-                        <button class="btn-preset btn-preset-zero" onclick="setMotorAngle('R3', 0)">0°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R3', 45)">45°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R3', 90)">90°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R3', 135)">135°</button>
-                        <button class="btn-preset" onclick="setMotorAngle('R3', 180)">180°</button>
-                        <button class="btn-step" onclick="stepMotor('R3', -1)">-1°</button>
-                        <button class="btn-step" onclick="stepMotor('R3', 1)">+1°</button>
+                        <button class="btn-preset btn-preset-zero" onclick="setMotorAngle('R4', 0)">0°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R4', 45)">45°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R4', 90)">90°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R4', 135)">135°</button>
+                        <button class="btn-preset" onclick="setMotorAngle('R4', 180)">180°</button>
+                        <button class="btn-step" onclick="stepMotor('R4', -1)">-1°</button>
+                        <button class="btn-step" onclick="stepMotor('R4', 1)">+1°</button>
                     </div>
                 </div>
             </div>
@@ -377,13 +377,13 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
             <div class="pose-card">
                 <button class="btn-primary" style="width:100%; margin-bottom:8px;" onclick="capturePose('Rest')">📌 Capture as HOME (Rest) Pose</button>
                 <div style="font-size:0.8rem; color:var(--text-muted);">Recorded Home Angles:</div>
-                <div class="pose-summary" id="summary-rest">R1:90 R2:90 L1:90 L2:90 R4:90 R3:90 L3:90 L4:90</div>
+                <div class="pose-summary" id="summary-rest">R1:66  R2:76  L1:86  L2:66  R4:70  R3:85  L3:53  L4:81</div>
             </div>
 
             <div class="pose-card">
                 <button class="btn-stand" style="width:100%; margin-bottom:8px;" onclick="capturePose('Stand')">📌 Capture as STAND Pose</button>
                 <div style="font-size:0.8rem; color:var(--text-muted);">Recorded Stand Angles:</div>
-                <div class="pose-summary" id="summary-stand">R1:135 R2:45 L1:45 L2:135 R4:0 R3:180 L3:0 L4:180</div>
+                <div class="pose-summary" id="summary-stand">R1:85  R2:76  L1:73  L2:81  R4:4  R3:145  L3:0  L4:145</div>
             </div>
         </div>
 
@@ -408,8 +408,8 @@ const char calibration_index_html[] PROGMEM = R"rawliteral(
             R4: 90, R3: 90, L3: 90, L4: 90
         };
 
-        let savedRest = { R1: 90, R2: 90, L1: 90, L2: 90, R4: 90, R3: 90, L3: 90, L4: 90 };
-        let savedStand = { R1: 135, R2: 45, L1: 45, L2: 135, R4: 0, R3: 180, L3: 0, L4: 180 };
+        let savedRest = { R1: 66, R2: 76, L1: 86, L2: 66, R4: 70, R3: 85, L3: 53, L4: 81 };
+        let savedStand = { R1: 85, R2: 76, L1: 73, L2: 81, R4: 4, R3: 145, L3: 0, L4: 145 };
 
         // Real-time debounced transmitter (trailing edge ~35ms)
         let pendingUpdates = {};
@@ -523,7 +523,7 @@ inline void runRestPose() {
   setServoAngle(L4, ${savedRest.L4});
 }
 
-inline void runStandPose(int face = 1) {
+inline void runStandPose(int face) {
   Serial.println(F("STAND (Calibrated)"));
   if (face == 1) setFaceWithMode("stand", FACE_ANIM_ONCE);
   setServoAngle(R1, ${savedStand.R1});

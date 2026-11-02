@@ -452,12 +452,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         
         const motors = [
             { id: 1, name: "R1 - Right Front Hip" },
-            { id: 2, name: "R2 - Right Front Knee" },
+            { id: 2, name: "R2 - Right Rear Hip" },
             { id: 3, name: "L1 - Left Front Hip" },
-            { id: 4, name: "L2 - Left Front Knee" },
+            { id: 4, name: "L2 - Left Rear Hip" },
             { id: 5, name: "R4 - Right Rear Knee" },
-            { id: 6, name: "R3 - Right Rear Hip" },
-            { id: 7, name: "L3 - Left Rear Hip" },
+            { id: 6, name: "R3 - Right Front Knee" },
+            { id: 7, name: "L3 - Left Front Knee" },
             { id: 8, name: "L4 - Left Rear Knee" }
         ];
 

@@ -44,11 +44,11 @@ int servoNameToIndex(const String& servo) {
 
 const char* getJointFriendlyName(const String& motor) {
   if (motor == "R1") return "FR-Hip (15)";
-  if (motor == "R4") return "FR-Knee (4)";
+  if (motor == "R3") return "FR-Knee (16)";
   if (motor == "L1") return "FL-Hip (23)";
   if (motor == "L3") return "FL-Knee (17)";
   if (motor == "R2") return "RR-Hip (2)";
-  if (motor == "R3") return "RR-Knee (16)";
+  if (motor == "R4") return "RR-Knee (4)";
   if (motor == "L2") return "RL-Hip (19)";
   if (motor == "L4") return "RL-Knee (18)";
   return "Unknown";

@@ -1,851 +1,674 @@
 #pragma once
-
 #include <Arduino.h>
 
-// ======================================================================
-// --- WEB INTERFACE HTML ---
-// ======================================================================
-
 const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Sesame Access Point Controller</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta charset="UTF-8">
-  <style>
-    :root {
-      --content-color: #ff8c42;
-      --content-color-dark: #e67a30;
-      --content-color-darker: #cc6b29;
-      --content-color-glow: rgba(255, 140, 66, 0.3);
-    }
-    
-    * {
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
-    
-    body { 
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-      text-align: center; 
-      background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
-      color: #e0e0e0; 
-      touch-action: manipulation; 
-      margin: 0;
-      padding: 10px;
-      overflow-x: hidden;
-      box-sizing: border-box;
-    }
-    
-    h2 { 
-      margin: 10px 0 20px 0;
-      color: #fff;
-      font-size: 32px;
-      font-weight: 600;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-    
-    /* Command Queue Status */
-    .command-queue {
-      font-size: 12px;
-      color: #888;
-      margin-bottom: 20px;
-    }
-    .command-queue.full {
-      color: #ff6b6b;
-      font-weight: bold;
-    }
-    
-    /* Section Containers */
-    .sections-container {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    
-    .section {
-      background: rgba(30, 30, 30, 0.8);
-      border: 1px solid #333;
-      border-radius: 16px;
-      padding: 15px;
-      margin: 0 auto;
-      width: calc(100% - 20px);
-      max-width: 450px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      box-sizing: border-box;
-    }
-    
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--content-color);
-      margin: 0 0 15px 0;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    /* Button Base Styles */
-    button { 
-      background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
-      border: none; 
-      color: #e0e0e0; 
-      padding: 15px; 
-      font-size: 18px; 
-      border-radius: 12px; 
-      cursor: pointer; 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      transition: all 0.1s;
-      font-weight: 500;
-    }
-    button:active { 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      transform: translateY(2px); 
-    }
-    
-    /* D-Pad Controls */
-    .dpad-container { 
-      display: flex; 
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-      width: 100%;
-    }
-    .dpad { 
-      display: grid; 
-      grid-template-columns: repeat(3, 1fr); 
-      grid-template-rows: repeat(2, 1fr); 
-      gap: 12px;
-      width: 100%;
-      max-width: 294px;
-      aspect-ratio: 3 / 2;
-    }
-    .dpad button { 
-      font-size: 35px; 
-      border: 2px solid #555; 
-      color: #fff;
-      width: 100%;
-      height: 100%;
-      min-height: 70px;
-    }
-    .spacer { 
-      visibility: hidden; 
-    }
-    
-    /* Pose Grid */
-    .grid { 
-      display: grid; 
-      grid-template-columns: repeat(3, 1fr); 
-      gap: 10px; 
-    }
-    .btn-pose { 
-      background: linear-gradient(145deg, var(--content-color), var(--content-color-dark));
-      padding: 12px 8px;
-      font-size: 15px;
-    }
-    .btn-pose:active { 
-      background: linear-gradient(145deg, var(--content-color-dark), var(--content-color-darker));
-    }
-    
-    /* Special Buttons */
-    .btn-stop-all { 
-      background: linear-gradient(145deg, #e63946, #c92a35);
-      width: 100%; 
-      font-size: 20px; 
-      padding: 18px; 
-      box-shadow: 0 6px 12px rgba(230, 57, 70, 0.4);
-      border: 2px solid #ff6b6b;
-      color: #fff;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .btn-stop-all:active { 
-      background: linear-gradient(145deg, #c92a35, #a8222c);
-      transform: translateY(3px); 
-    }
-    
-    .btn-settings { 
-      background: linear-gradient(145deg, #555, #444);
-      padding: 12px 25px;
-      font-size: 16px;
-    }
-    
-    /* Motor Controls */
-    .lock-indicator {
-      font-size: 11px;
-      color: #ff6b6b;
-      text-align: center;
-      margin-top: 5px;
-      display: none;
-    }
-    .lock-indicator.active {
-      display: block;
-    }
-    
-    .motor-controls {
-      margin-top: 10px;
-    }
-    .motor-slider {
-      margin: 15px 0;
-    }
-    .motor-slider label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #aaa;
-      margin-bottom: 5px;
-    }
-    .motor-slider input[type="range"] {
-      width: 100%;
-      height: 6px;
-      background: #333;
-      border-radius: 5px;
-      outline: none;
-      -webkit-appearance: none;
-    }
-    .motor-slider input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      background: var(--content-color);
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 2px 6px var(--content-color-glow);
-    }
-    .motor-slider input[type="range"]::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      background: var(--content-color);
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 2px 6px var(--content-color-glow);
-    }
-    .motor-slider input[type="range"]:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .motor-slider input[type="range"]:disabled::-webkit-slider-thumb,
-    .motor-slider input[type="range"]:disabled::-moz-range-thumb {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    /* Gamepad Status */
-    .gamepad-status {
-      font-size: 13px;
-      padding: 8px 14px;
-      border-radius: 10px;
-      border: 2px solid #666;
-      color: #ccc;
-      background: rgba(26, 26, 26, 0.8);
-      display: inline-block;
-    }
-    .gamepad-status.connected {
-      border-color: #2ecc71;
-      color: #2ecc71;
-      background: rgba(46, 204, 113, 0.1);
-    }
-    
-    /* Settings Panel */
-    .settings-panel { 
-      display: none; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0,0,0,0.9); 
-      z-index: 100; 
-      backdrop-filter: blur(8px);
-      overflow-y: auto;
-    }
-    .settings-content { 
-      background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
-      border: 1px solid #444; 
-      max-width: 400px; 
-      margin: 30px auto; 
-      padding: 25px; 
-      border-radius: 20px; 
-      text-align: left; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-    }
-    .settings-content h3 { 
-      color: var(--content-color); 
-      margin-top: 0; 
-      text-align: center;
-      font-size: 24px;
-    }
-    .settings-section {
-      margin: 20px 0;
-      padding: 15px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 10px;
-    }
-    .settings-section h4 {
-      color: var(--content-color);
-      margin: 0 0 10px 0;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .settings-content label { 
-      display: block; 
-      margin-top: 12px; 
-      font-weight: 500; 
-      color: #ccc;
-      font-size: 13px;
-    }
-    .settings-content input, 
-    .settings-content select { 
-      width: 100%; 
-      padding: 10px; 
-      margin-top: 5px; 
-      background: #333; 
-      color: #fff; 
-      border: 1px solid #555; 
-      border-radius: 8px; 
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    .btn-save { 
-      background: linear-gradient(145deg, #2ecc71, #27ae60);
-      box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
-      width: 100%; 
-      margin-top: 25px; 
-      color: #fff; 
-    }
-    .btn-close { 
-      background: linear-gradient(145deg, #e74c3c, #c0392b);
-      box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
-      width: 100%; 
-      margin-top: 12px; 
-      color: #fff; 
-    }
-    
-    /* Desktop Layout */
-    @media (min-width: 1024px) {
-      body {
-        padding: 15px;
-      }
-      .section {
-        padding: 20px;
-        width: 100%;
-      }
-      h2 {
-        margin-bottom: 30px;
-      }
-      .command-queue {
-        margin-bottom: 30px;
-      }
-      .sections-container {
-        flex-direction: row;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 50px;
-        padding: 0 20px;
-      }
-      .section-column {
-        flex: 0 1 450px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-      .section {
-        width: 100%;
-        max-width: 450px;
-        margin: 0;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quadruped Controller</title>
+    <style>
+        :root {
+            --bg-top: #0a0a0a;
+            --bg-bottom: #1a1a2e;
+            --panel-bg: rgba(30, 30, 30, 0.8);
+            --panel-border: #333;
+            --accent: #ff8c42;
+            --accent-hover: #ff9e5e;
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
+            --btn-base: #3a3a3a;
+            --btn-base-hover: #4a4a4a;
+            --stop-btn: #e63946;
+            --stop-btn-hover: #f04b58;
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom));
+            background-attachment: fixed;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            padding-top: 50px;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .header-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: rgba(10, 10, 10, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 100;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        #queue-status {
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        #queue-status.full {
+            color: var(--stop-btn);
+        }
+
+        #settings-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .col {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Buttons */
+        button {
+            font-family: var(--font-family);
+            background: linear-gradient(to bottom, var(--btn-base), #2a2a2a);
+            color: var(--text);
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .pose-btn {
+            background: linear-gradient(to bottom, var(--accent), #d16e25);
+            border-color: #d16e25;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .pose-btn:active {
+            background: linear-gradient(to bottom, var(--accent-hover), var(--accent));
+        }
+
+        /* D-Pad */
+        .dpad-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 10px;
+        }
+        .dpad-btn {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+        .dpad-btn.up { grid-column: 2; grid-row: 1; }
+        .dpad-btn.left { grid-column: 1; grid-row: 2; }
+        .dpad-btn.right { grid-column: 3; grid-row: 2; }
+        .dpad-btn.down { grid-column: 2; grid-row: 3; }
+        .dpad-center { grid-column: 2; grid-row: 2; background: none; border: none; box-shadow: none; }
+
+        .stop-btn {
+            width: 100%;
+            background: linear-gradient(to bottom, var(--stop-btn), #c32d39);
+            border: 2px solid var(--stop-btn);
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            padding: 15px;
+        }
+
+        /* Speed Control */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .speed-control span {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -9px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        
+        .val-display {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-top: 5px;
+        }
+
+        /* Poses */
+        .poses-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        /* Motors */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .quick-actions button {
+            flex: 1;
+        }
+        #motor-lock-msg {
+            text-align: center;
+            color: var(--stop-btn);
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .motor-item {
+            margin-bottom: 15px;
+        }
+        .motor-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+        .modal-content h2 { margin-bottom: 20px; }
+        .setting-group { margin-bottom: 15px; }
+        .setting-group label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: var(--text-muted); }
+        .setting-group input[type="number"], .setting-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #1a1a1a;
+            color: white;
+            font-family: var(--font-family);
+        }
+        .theme-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .color-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-dot.active { border-color: white; }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-actions button { flex: 1; }
+        .btn-primary { background: linear-gradient(to bottom, var(--accent), #d16e25); color: white; border:none; }
+
+        .disabled { opacity: 0.5; pointer-events: none; }
+    </style>
 </head>
 <body>
-  <h2>Sesame Controller</h2>
-  <div class="command-queue" id="queueStatus">Command Queue: 0/3</div>
-  
-  <div class="sections-container">
-    <div class="section-column">
-      <!-- Movement Control Section -->
-      <div class="section">
-    <div class="section-title">Movement Control</div>
-    <div class="dpad-container">
-      <div class="dpad">
-        <div class="spacer"></div>
-        <button onmousedown="move('forward')" onmouseup="stop()" ontouchstart="move('forward')" ontouchend="stop()">&#9650;</button>
-        <div class="spacer"></div>
+
+    <div class="header-bar">
+        <div id="queue-status">Command Queue: 0/3</div>
+        <button id="settings-btn" onclick="openSettings()">⚙️</button>
+    </div>
+
+    <div class="container">
+        <!-- Left Column -->
+        <div class="col">
+            <!-- Movement Panel -->
+            <div class="panel">
+                <h2>Movement</h2>
+                <div class="dpad-container">
+                    <div class="dpad">
+                        <button class="dpad-btn up" 
+                            onmousedown="startMove('forward')" onmouseup="stopMove()" 
+                            ontouchstart="tStartMove(event, 'forward')" ontouchend="tStopMove(event)">▲</button>
+                        <button class="dpad-btn left" 
+                            onmousedown="startMove('left')" onmouseup="stopMove()" 
+                            ontouchstart="tStartMove(event, 'left')" ontouchend="tStopMove(event)">◀</button>
+                        <div class="dpad-center"></div>
+                        <button class="dpad-btn right" 
+                            onmousedown="startMove('right')" onmouseup="stopMove()" 
+                            ontouchstart="tStartMove(event, 'right')" ontouchend="tStopMove(event)">▶</button>
+                        <button class="dpad-btn down" 
+                            onmousedown="startMove('backward')" onmouseup="stopMove()" 
+                            ontouchstart="tStartMove(event, 'backward')" ontouchend="tStopMove(event)">▼</button>
+                    </div>
+                </div>
+                <button class="stop-btn" onmousedown="stopAll()" ontouchstart="tStopAll(event)">STOP ALL</button>
+            </div>
+
+            <!-- Speed Panel -->
+            <div class="panel">
+                <h2>Speed</h2>
+                <div class="speed-control">
+                    <span>Slow</span>
+                    <input type="range" id="speedSlider" min="30" max="300" value="200" oninput="updateSpeedUi(this.value)" onchange="sendSpeed(this.value)">
+                    <span>Fast</span>
+                </div>
+                <div class="val-display">Frame Delay: <span id="speedVal">100</span> ms</div>
+            </div>
+
+            <!-- Poses Panel -->
+            <div class="panel">
+                <h2>Poses & Actions</h2>
+                <div class="poses-grid">
+                    <button class="pose-btn" onclick="pose('rest')">Rest</button>
+                    <button class="pose-btn" onclick="pose('stand')">Stand</button>
+                    <button class="pose-btn" onclick="pose('wave')">Wave</button>
+                    <button class="pose-btn" onclick="pose('dance')">Dance</button>
+                    <button class="pose-btn" onclick="pose('swim')">Swim</button>
+                    <button class="pose-btn" onclick="pose('point')">Point</button>
+                    <button class="pose-btn" onclick="pose('pushup')">Pushup</button>
+                    <button class="pose-btn" onclick="pose('bow')">Bow</button>
+                    <button class="pose-btn" onclick="pose('cute')">Cute</button>
+                    <button class="pose-btn" onclick="pose('freaky')">Freaky</button>
+                    <button class="pose-btn" onclick="pose('worm')">Worm</button>
+                    <button class="pose-btn" onclick="pose('shake')">Shake</button>
+                    <button class="pose-btn" onclick="pose('shrug')">Shrug</button>
+                    <button class="pose-btn" onclick="pose('dead')">Dead</button>
+                    <button class="pose-btn" onclick="pose('crab')">Crab</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col">
+            <div class="panel">
+                <h2>Motor Control</h2>
+                <div class="quick-actions">
+                    <button onclick="pose('rest')">Home</button>
+                    <button onclick="pose('stand')">Stand</button>
+                </div>
+                <div id="motor-lock-msg">Locked during animations</div>
+                
+                <div id="motor-sliders-container">
+                    <!-- Sliders injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="setting-group">
+                <label>Frame Delay (ms)</label>
+                <input type="number" id="set-frameDelay" value="100">
+            </div>
+            <div class="setting-group">
+                <label>Walk Cycles</label>
+                <input type="number" id="set-walkCycles" value="1">
+            </div>
+            <div class="setting-group">
+                <label>Motor Current Delay (ms)</label>
+                <input type="number" id="set-motorCurrentDelay" value="10">
+            </div>
+            <div class="setting-group">
+                <label>Theme Color</label>
+                <div class="theme-picker" id="theme-picker">
+                    <div class="color-dot active" style="background: #ff8c42" onclick="setTheme('#ff8c42', this)"></div>
+                    <div class="color-dot" style="background: #00e5ff" onclick="setTheme('#00e5ff', this)"></div>
+                    <div class="color-dot" style="background: #00e676" onclick="setTheme('#00e676', this)"></div>
+                    <div class="color-dot" style="background: #ff1744" onclick="setTheme('#ff1744', this)"></div>
+                    <div class="color-dot" style="background: #d500f9" onclick="setTheme('#d500f9', this)"></div>
+                    <div class="color-dot" style="background: #f50057" onclick="setTheme('#f50057', this)"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeSettings()">Cancel</button>
+                <button class="btn-primary" onclick="saveSettings()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // System State
+        let cmdQueue = 0;
+        let motorsLocked = false;
+        let lockTimeout = null;
         
-        <button onmousedown="move('left')" onmouseup="stop()" ontouchstart="move('left')" ontouchend="stop()">&#9664;</button>
-        <button onmousedown="move('backward')" onmouseup="stop()" ontouchstart="move('backward')" ontouchend="stop()">&#9660;</button>
-        <button onmousedown="move('right')" onmouseup="stop()" ontouchstart="move('right')" ontouchend="stop()">&#9654;</button>
-      </div>
-      <button class="btn-stop-all" onclick="stop()">STOP ALL</button>
-    </div>
-  </div>
+        const motors = [
+            { id: 1, name: "R1 - Right Front Hip" },
+            { id: 2, name: "R2 - Right Rear Hip" },
+            { id: 3, name: "L1 - Left Front Hip" },
+            { id: 4, name: "L2 - Left Rear Hip" },
+            { id: 5, name: "R4 - Right Rear Knee" },
+            { id: 6, name: "R3 - Right Front Knee" },
+            { id: 7, name: "L3 - Left Front Knee" },
+            { id: 8, name: "L4 - Left Rear Knee" }
+        ];
 
-      <!-- Poses & Animations Section -->
-      <div class="section">
-        <div class="section-title">Poses & Animations</div>
-        <div class="grid">
-          <button class="btn-pose" onclick="pose('rest')">Rest</button>
-          <button class="btn-pose" onclick="pose('stand')">Stand</button>
-          <button class="btn-pose" onclick="pose('wave')">Wave</button>
-          <button class="btn-pose" onclick="pose('dance')">Dance</button>
-          <button class="btn-pose" onclick="pose('swim')">Swim</button>
-          <button class="btn-pose" onclick="pose('point')">Point</button>
-          <button class="btn-pose" onclick="pose('pushup')">Pushup</button>
-          <button class="btn-pose" onclick="pose('bow')">Bow</button>
-          <button class="btn-pose" onclick="pose('cute')">Cute</button>
-          <button class="btn-pose" onclick="pose('freaky')">Freaky</button>
-          <button class="btn-pose" onclick="pose('worm')">Worm</button>
-          <button class="btn-pose" onclick="pose('shake')">Shake</button>
-          <button class="btn-pose" onclick="pose('shrug')">Shrug</button>
-          <button class="btn-pose" onclick="pose('dead')">Dead</button>
-          <button class="btn-pose" onclick="pose('crab')">Crab</button>
-        </div>
-      </div>
-    </div>
+        let lastMotorUpdate = {};
 
-    <div class="section-column">
-      <!-- Settings & Status Section -->
-      <div class="section">
-        <div class="section-title">System</div>
-        <button class="btn-settings" onclick="openSettings()">Settings</button>
-        <div style="margin-top: 15px;">
-          <div id="gamepadStatus" class="gamepad-status">Gamepad disconnected</div>
-        </div>
-      </div>
-    </div>
-  </div>
+        // Initialization
+        function init() {
+            const container = document.getElementById('motor-sliders-container');
+            motors.forEach(m => {
+                lastMotorUpdate[m.id] = 0;
+                container.innerHTML += `
+                    <div class="motor-item">
+                        <div class="motor-header">
+                            <span>${m.name}</span>
+                            <span id="val-m${m.id}">90&deg;</span>
+                        </div>
+                        <input type="range" class="motor-slider" id="slider-m${m.id}" min="0" max="180" value="90" 
+                            oninput="updateMotorUi(${m.id}, this.value)" 
+                            onchange="sendMotor(${m.id}, this.value)">
+                    </div>
+                `;
+            });
 
-  <div id="settingsPanel" class="settings-panel">
-    <div class="settings-content">
-      <h3>Settings</h3>
-      
-      <div class="settings-section">
-        <h4>Animation Parameters</h4>
-        <label>Frame Delay (ms):</label>
-        <input type="number" id="frameDelay" min="1" max="1000" step="1">
-        <label>Walk Cycles:</label>
-        <input type="number" id="walkCycles" min="1" max="50" step="1">
-      </div>
-
-      <div class="settings-section">
-        <h4>Motor Settings</h4>
-        <label>Motor Current Delay (ms):</label>
-        <input type="number" id="motorCurrentDelay" min="0" max="500" step="1">
-        <label>Motor Speed:</label>
-        <select id="motorSpeed">
-          <option value="slow">Slow</option>
-          <option value="medium" selected>Medium</option>
-          <option value="fast">Fast</option>
-        </select>
-      </div>
-
-      <div class="settings-section">
-        <h4>Theme</h4>
-        <label>Accent Color:</label>
-        <select id="themeColor">
-          <option value="#ff8c42">Orange (Default)</option>
-          <option value="#66d9ef">Cyan</option>
-          <option value="#a8dadc">Light Blue</option>
-          <option value="#2ecc71">Green</option>
-          <option value="#e74c3c">Red</option>
-          <option value="#9b59b6">Purple</option>
-          <option value="#f39c12">Yellow</option>
-          <option value="#e91e63">Pink</option>
-          <option value="custom">Custom</option>
-        </select>
-        <input type="color" id="customColor" value="#ff8c42" style="margin-top: 10px; display: none;">
-      </div>
-
-      <button class="btn-settings" style="width: 100%; margin-top: 20px;" onclick="openMotorControl()">Manual Motor Control</button>
-
-      <button class="btn-save" onclick="saveSettings()">Save Settings</button>
-      <button class="btn-close" onclick="closeSettings()">Close</button>
-    </div>
-  </div>
-
-  <div id="motorControlPanel" class="settings-panel">
-    <div class="settings-content">
-      <h3>Manual Motor Control</h3>
-      <div class="lock-indicator" id="lockIndicator">Locked during animations</div>
-      
-      <div class="settings-section">
-        <div class="motor-controls">
-          <div class="motor-slider">
-            <label><span>S0 R1</span><span id="m1val">90&deg;</span></label>
-            <input type="range" id="motor1" min="0" max="180" value="90" oninput="updateMotor(1, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S1 R2</span><span id="m2val">90&deg;</span></label>
-            <input type="range" id="motor2" min="0" max="180" value="90" oninput="updateMotor(2, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S2 L1</span><span id="m3val">90&deg;</span></label>
-            <input type="range" id="motor3" min="0" max="180" value="90" oninput="updateMotor(3, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S3 L2</span><span id="m4val">90&deg;</span></label>
-            <input type="range" id="motor4" min="0" max="180" value="90" oninput="updateMotor(4, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S4 R4</span><span id="m5val">90&deg;</span></label>
-            <input type="range" id="motor5" min="0" max="180" value="90" oninput="updateMotor(5, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S5 R3</span><span id="m6val">90&deg;</span></label>
-            <input type="range" id="motor6" min="0" max="180" value="90" oninput="updateMotor(6, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S6 L3</span><span id="m7val">90&deg;</span></label>
-            <input type="range" id="motor7" min="0" max="180" value="90" oninput="updateMotor(7, this.value)">
-          </div>
-          <div class="motor-slider">
-            <label><span>S7 L4</span><span id="m8val">90&deg;</span></label>
-            <input type="range" id="motor8" min="0" max="180" value="90" oninput="updateMotor(8, this.value)">
-          </div>
-        </div>
-      </div>
-
-      <button class="btn-close" onclick="closeMotorControl()">Close</button>
-    </div>
-  </div>
-
-<script>
-// Command queue management - max 3 commands
-let commandQueue = 0;
-const MAX_COMMANDS = 3;
-let motorsLocked = false;
-
-// Load theme on page load
-document.addEventListener('DOMContentLoaded', () => {
-  loadTheme();
-});
-
-function loadTheme() {
-  const savedColor = localStorage.getItem('themeColor');
-  if (savedColor) {
-    applyTheme(savedColor);
-  }
-}
-
-function applyTheme(color) {
-  const root = document.documentElement;
-  root.style.setProperty('--content-color', color);
-  
-  // Calculate darker shades
-  const rgb = hexToRgb(color);
-  if (rgb) {
-    const dark = `rgb(${Math.max(0, rgb.r - 20)}, ${Math.max(0, rgb.g - 20)}, ${Math.max(0, rgb.b - 20)})`;
-    const darker = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`;
-    const glow = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`;
-    
-    root.style.setProperty('--content-color-dark', dark);
-    root.style.setProperty('--content-color-darker', darker);
-    root.style.setProperty('--content-color-glow', glow);
-  }
-}
-
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
-function updateQueueStatus() {
-  const queueEl = document.getElementById('queueStatus');
-  queueEl.textContent = `Command Queue: ${commandQueue}/${MAX_COMMANDS}`;
-  if (commandQueue >= MAX_COMMANDS) {
-    queueEl.classList.add('full');
-  } else {
-    queueEl.classList.remove('full');
-  }
-}
-
-function canSendCommand() {
-  return commandQueue < MAX_COMMANDS;
-}
-
-function incrementQueue() {
-  commandQueue++;
-  updateQueueStatus();
-  setTimeout(() => {
-    if (commandQueue > 0) {
-      commandQueue--;
-    }
-    updateQueueStatus();
-  }, 1000);
-}
-
-function lockMotors(duration = 3000) {
-  motorsLocked = true;
-  document.getElementById('lockIndicator').classList.add('active');
-  for (let i = 1; i <= 8; i++) {
-    const slider = document.getElementById('motor' + i);
-    if (slider) slider.disabled = true;
-  }
-  setTimeout(() => {
-    motorsLocked = false;
-    document.getElementById('lockIndicator').classList.remove('active');
-    for (let i = 1; i <= 8; i++) {
-      const slider = document.getElementById('motor' + i);
-      if (slider) slider.disabled = false;
-    }
-  }, duration);
-}
-
-function move(dir) { 
-  if (!canSendCommand()) return;
-  incrementQueue();
-  fetch('/cmd?go=' + dir).catch(console.log); 
-}
-
-function stop() { 
-  commandQueue = 0;
-  updateQueueStatus();
-  fetch('/cmd?stop=1').catch(console.log); 
-}
-
-function pose(name) { 
-  if (!canSendCommand()) return;
-  incrementQueue();
-  lockMotors(3000);
-  fetch('/cmd?pose=' + name).catch(console.log); 
-}
-
-function updateMotor(motorNum, value) {
-  if (motorsLocked) return;
-  document.getElementById('m' + motorNum + 'val').textContent = value + '\u00B0';
-  if (!canSendCommand()) return;
-  incrementQueue();
-  fetch('/cmd?motor=' + motorNum + '&value=' + value).catch(console.log);
-}
-
-function openSettings() {
-  fetch('/getSettings').then(r => r.json()).then(data => {
-    document.getElementById('frameDelay').value = data.frameDelay || 100;
-    document.getElementById('walkCycles').value = data.walkCycles || 10;
-    document.getElementById('motorCurrentDelay').value = data.motorCurrentDelay || 20;
-    document.getElementById('motorSpeed').value = data.motorSpeed || 'medium';
-    
-    // Load theme settings
-    const savedColor = localStorage.getItem('themeColor') || '#ff8c42';
-    const colorSelect = document.getElementById('themeColor');
-    const customColorInput = document.getElementById('customColor');
-    
-    // Check if saved color matches a preset
-    let matchFound = false;
-    for (let option of colorSelect.options) {
-      if (option.value === savedColor) {
-        colorSelect.value = savedColor;
-        matchFound = true;
-        break;
-      }
-    }
-    
-    if (!matchFound) {
-      colorSelect.value = 'custom';
-      customColorInput.value = savedColor;
-      customColorInput.style.display = 'block';
-    }
-    
-    document.getElementById('settingsPanel').style.display = 'block';
-  }).catch(() => {
-    // Fallback if settings endpoint doesn't exist yet
-    document.getElementById('frameDelay').value = 100;
-    document.getElementById('walkCycles').value = 10;
-    document.getElementById('motorCurrentDelay').value = 20;
-    
-    const savedColor = localStorage.getItem('themeColor') || '#ff8c42';
-    document.getElementById('themeColor').value = savedColor;
-    
-    document.getElementById('settingsPanel').style.display = 'block';
-  });
-  
-  // Add event listener for theme color change
-  document.getElementById('themeColor').addEventListener('change', function() {
-    const customColorInput = document.getElementById('customColor');
-    if (this.value === 'custom') {
-      customColorInput.style.display = 'block';
-    } else {
-      customColorInput.style.display = 'none';
-      applyTheme(this.value);
-    }
-  });
-  
-  document.getElementById('customColor').addEventListener('input', function() {
-    applyTheme(this.value);
-  });
-}
-
-function closeSettings() { 
-  document.getElementById('settingsPanel').style.display = 'none'; 
-}
-
-function openMotorControl() {
-  document.getElementById('motorControlPanel').style.display = 'block';
-}
-
-function closeMotorControl() {
-  document.getElementById('motorControlPanel').style.display = 'none';
-}
-
-function saveSettings() {
-  const fd = document.getElementById('frameDelay').value;
-  const wc = document.getElementById('walkCycles').value;
-  const mcd = document.getElementById('motorCurrentDelay').value;
-  const ms = document.getElementById('motorSpeed').value;
-  
-  // Save theme color
-  const colorSelect = document.getElementById('themeColor');
-  const customColorInput = document.getElementById('customColor');
-  const themeColor = colorSelect.value === 'custom' ? customColorInput.value : colorSelect.value;
-  localStorage.setItem('themeColor', themeColor);
-  applyTheme(themeColor);
-  
-  fetch(`/setSettings?frameDelay=${fd}&walkCycles=${wc}&motorCurrentDelay=${mcd}&motorSpeed=${ms}`)
-    .then(() => closeSettings())
-    .catch(() => closeSettings());
-}
-
-let activeGamepadIndex = null;
-let gamepadPollId = null;
-let lastButtonStates = [];
-let lastAxisDir = { x: 0, y: 0 };
-const axisThreshold = 0.5;
-const pollIntervalMs = 80;
-
-const buttonBindings = {
-  0: () => pose('stand'),   // A / Cross
-  1: () => pose('wave'),    // B / Circle
-  2: () => pose('dance'),   // X / Square
-  3: () => pose('swim'),    // Y / Triangle
-  4: () => pose('point'),   // LB / L1
-  5: () => pose('pushup'),  // RB / R1
-  6: () => pose('bow'),     // LT / L2
-  7: () => pose('shake'),   // RT / R2
-  8: () => stop(),          // Back / Share
-  9: () => pose('rest'),    // Start / Options
-  10: () => pose('cute'),   // L3
-  11: () => pose('freaky'), // R3
-  12: () => move('forward'),// D-pad up
-  13: () => move('backward'),// D-pad down
-  14: () => move('left'),   // D-pad left
-  15: () => move('right'),  // D-pad right
-  16: () => stop(),         // Home / PS
-  17: () => pose('worm')    // Touchpad / extra
-};
-
-const buttonReleaseStop = new Set([12, 13, 14, 15]);
-
-function updateGamepadStatus(connected) {
-  const status = document.getElementById('gamepadStatus');
-  if (!status) return;
-  if (connected) {
-    status.textContent = 'Gamepad connected';
-    status.classList.add('connected');
-  } else {
-    status.textContent = 'Gamepad disconnected';
-    status.classList.remove('connected');
-  }
-}
-
-function handleButtonChange(index, pressed) {
-  if (pressed) {
-    const action = buttonBindings[index];
-    if (action) action();
-  } else if (buttonReleaseStop.has(index)) {
-    stop();
-  }
-}
-
-function getAxisDirection(x, y) {
-  if (Math.abs(x) < axisThreshold && Math.abs(y) < axisThreshold) return { x: 0, y: 0 };
-  if (Math.abs(x) > Math.abs(y)) {
-    return { x: x > 0 ? 1 : -1, y: 0 };
-  }
-  return { x: 0, y: y > 0 ? 1 : -1 };
-}
-
-function applyAxisDirection(dir) {
-  if (dir.x === 1) move('right');
-  else if (dir.x === -1) move('left');
-  else if (dir.y === 1) move('backward');
-  else if (dir.y === -1) move('forward');
-  else stop();
-}
-
-function pollGamepad() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  const pad = pads && activeGamepadIndex !== null ? pads[activeGamepadIndex] : null;
-  if (!pad) {
-    updateGamepadStatus(false);
-    return;
-  }
-  updateGamepadStatus(true);
-
-  if (!lastButtonStates.length) {
-    lastButtonStates = pad.buttons.map(b => !!b.pressed);
-  }
-  pad.buttons.forEach((btn, i) => {
-    const pressed = !!btn.pressed;
-    if (pressed !== lastButtonStates[i]) {
-      handleButtonChange(i, pressed);
-      lastButtonStates[i] = pressed;
-    }
-  });
-
-  const x = pad.axes[0] || 0;
-  const y = pad.axes[1] || 0;
-  const dir = getAxisDirection(x, y);
-  if (dir.x !== lastAxisDir.x || dir.y !== lastAxisDir.y) {
-    applyAxisDirection(dir);
-    lastAxisDir = dir;
-  }
-}
-
-window.addEventListener('gamepadconnected', (e) => {
-  activeGamepadIndex = e.gamepad.index;
-  lastButtonStates = [];
-  lastAxisDir = { x: 0, y: 0 };
-  updateGamepadStatus(true);
-  if (!gamepadPollId) {
-    gamepadPollId = setInterval(pollGamepad, pollIntervalMs);
-  }
-});
-
-window.addEventListener('gamepaddisconnected', (e) => {
-  if (activeGamepadIndex === e.gamepad.index) {
-    activeGamepadIndex = null;
-    lastButtonStates = [];
-    lastAxisDir = { x: 0, y: 0 };
-    updateGamepadStatus(false);
-  }
-});
-
-if (navigator.getGamepads) {
-  setInterval(() => {
-    if (activeGamepadIndex !== null) return;
-    const pads = navigator.getGamepads();
-    if (!pads) return;
-    for (let i = 0; i < pads.length; i++) {
-      if (pads[i]) {
-        activeGamepadIndex = pads[i].index;
-        updateGamepadStatus(true);
-        if (!gamepadPollId) {
-          gamepadPollId = setInterval(pollGamepad, pollIntervalMs);
+            // Load Theme
+            const savedTheme = localStorage.getItem('quadTheme');
+            if (savedTheme) {
+                document.documentElement.style.setProperty('--accent', savedTheme);
+                document.documentElement.style.setProperty('--accent-hover', adjustColor(savedTheme, 20));
+                
+                // Update dots
+                document.querySelectorAll('.color-dot').forEach(dot => {
+                    dot.classList.remove('active');
+                    if (rgb2hex(dot.style.background) === savedTheme) dot.classList.add('active');
+                });
+            }
+            
+            // Set speed default UI based on actual mapping
+            // actualSpeed = 330 - sliderValue
+            // If actual = 100, sliderValue = 230
+            document.getElementById('speedSlider').value = 230;
+            updateSpeedUi(230);
         }
-        break;
-      }
-    }
-  }, 1000);
-}
-</script>
+
+        // Helpers
+        const queueUi = document.getElementById('queue-status');
+        
+        function updateQueue() {
+            queueUi.textContent = `Command Queue: ${cmdQueue}/3`;
+            if (cmdQueue >= 3) queueUi.classList.add('full');
+            else queueUi.classList.remove('full');
+        }
+
+        function addQueue() {
+            if (cmdQueue < 3) {
+                cmdQueue++;
+                updateQueue();
+                setTimeout(() => {
+                    if (cmdQueue > 0) cmdQueue--;
+                    updateQueue();
+                }, 1000);
+                return true;
+            }
+            return false;
+        }
+
+        function clearQueue() {
+            cmdQueue = 0;
+            updateQueue();
+        }
+
+        function sendCmd(cmd) {
+            if (!addQueue()) return;
+            fetch(`/cmd?${cmd}`).catch(e => console.log('Cmd error', e));
+        }
+
+        // Movement
+        let moveInterval = null;
+        function startMove(dir) {
+            if (moveInterval) clearInterval(moveInterval);
+            sendCmd(`go=${dir}`);
+            moveInterval = setInterval(() => {
+                if(cmdQueue < 2) sendCmd(`go=${dir}`);
+            }, 600);
+        }
+        function stopMove() {
+            if (moveInterval) {
+                clearInterval(moveInterval);
+                moveInterval = null;
+            }
+            sendCmd('stop=1');
+        }
+
+        // Touch Wrappers
+        function tStartMove(e, dir) { e.preventDefault(); startMove(dir); }
+        function tStopMove(e) { e.preventDefault(); stopMove(); }
+        function tStopAll(e) { e.preventDefault(); stopAll(); }
+
+        function stopAll() {
+            clearQueue();
+            if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+            fetch('/cmd?stop=1').catch(e => {});
+        }
+
+        // Poses
+        function pose(name) {
+            if (!addQueue()) return;
+            fetch(`/cmd?pose=${name}`).catch(e => {});
+            
+            // Lock motors
+            motorsLocked = true;
+            document.getElementById('motor-lock-msg').style.display = 'block';
+            document.querySelectorAll('.motor-slider').forEach(el => el.classList.add('disabled'));
+            
+            if (lockTimeout) clearTimeout(lockTimeout);
+            lockTimeout = setTimeout(() => {
+                motorsLocked = false;
+                document.getElementById('motor-lock-msg').style.display = 'none';
+                document.querySelectorAll('.motor-slider').forEach(el => el.classList.remove('disabled'));
+            }, 3000);
+        }
+
+        // Speed
+        // Mapping: speedSlider ranges 30 to 300. We want right (300) to be fast (30ms).
+        // actualSpeed = 330 - sliderValue
+        function calcSpeed(val) {
+            return 330 - parseInt(val);
+        }
+        function updateSpeedUi(val) {
+            document.getElementById('speedVal').textContent = calcSpeed(val);
+        }
+        function sendSpeed(val) {
+            let actualMs = calcSpeed(val);
+            sendCmd(`speed=${actualMs}`);
+        }
+
+        // Motors
+        function updateMotorUi(id, val) {
+            if (motorsLocked) return;
+            document.getElementById(`val-m${id}`).innerHTML = `${val}&deg;`;
+            
+            const now = Date.now();
+            if (now - lastMotorUpdate[id] > 80) {
+                lastMotorUpdate[id] = now;
+                sendMotorFast(id, val);
+            }
+        }
+        
+        function sendMotorFast(id, val) {
+            if (motorsLocked || cmdQueue >= 3) return;
+            fetch(`/cmd?motor=${id}&value=${val}`).catch(e => {});
+        }
+
+        function sendMotor(id, val) {
+            if (motorsLocked) {
+                // reset visual if locked
+                document.getElementById(`slider-m${id}`).value = 90;
+                document.getElementById(`val-m${id}`).innerHTML = `90&deg;`;
+                return;
+            }
+            sendCmd(`motor=${id}&value=${val}`);
+        }
+
+        // Settings Modal
+        const modal = document.getElementById('settings-modal');
+        function openSettings() {
+            modal.classList.add('active');
+            fetch('/getSettings')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.frameDelay) document.getElementById('set-frameDelay').value = data.frameDelay;
+                    if(data.walkCycles) document.getElementById('set-walkCycles').value = data.walkCycles;
+                    if(data.motorCurrentDelay) document.getElementById('set-motorCurrentDelay').value = data.motorCurrentDelay;
+                }).catch(e => console.log('Failed to get settings'));
+        }
+        function closeSettings() {
+            modal.classList.remove('active');
+        }
+        function saveSettings() {
+            const fd = document.getElementById('set-frameDelay').value;
+            const wc = document.getElementById('set-walkCycles').value;
+            const mcd = document.getElementById('set-motorCurrentDelay').value;
+            
+            fetch(`/setSettings?frameDelay=${fd}&walkCycles=${wc}&motorCurrentDelay=${mcd}`)
+                .then(() => closeSettings())
+                .catch(e => { alert('Failed to save settings'); closeSettings(); });
+        }
+
+        // Theme
+        function setTheme(color, el) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-hover', adjustColor(color, 20));
+            localStorage.setItem('quadTheme', color);
+            
+            document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
+            if(el) el.classList.add('active');
+        }
+
+        function adjustColor(color, amount) {
+            return '#' + color.replace(/^#/, '').replace(/../g, color => 
+                ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+        }
+
+        function rgb2hex(rgb) {
+            if (rgb.search("rgb") == -1) return rgb;
+            rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\)$/);
+            function hex(x) { return ("0" + parseInt(x).toString(16)).slice(-2); }
+            return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
 )rawliteral";
