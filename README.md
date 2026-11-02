@@ -2,6 +2,8 @@
 
 An end-to-end autonomous robotics project featuring real-time overhead computer vision tracking (ArUco planar homography), dynamic A* path planning with strict $\ge 5\text{ cm}$ obstacle clearance, Stanley steering path-following control, human hand safety gating, ESP32 Wi-Fi hardware-in-the-loop actuation, and a live ROS 2 Humble RViz 3D Digital Twin.
 
+> 📖 **Comprehensive Technical Reference & Theory Guide**: For a detailed breakdown of all algorithms, gait kinematics, coordinate transforms, pixel math, and Gazebo/RViz setup, read [`docs/PROJECT_DOCUMENTATION.md`](docs/PROJECT_DOCUMENTATION.md).
+
 ---
 
 ## Architecture Overview

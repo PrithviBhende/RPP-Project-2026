@@ -1,0 +1,65 @@
+R1= front right hip (if you are the robot this will be your right leg in front), gpio 15, 78, 104
+
+R3= front right knee, gpio 16, 87, 151
+
+R2= rear right hip, gpio 2, 82, 52
+
+R4= rear right knee, gpio 4, 91, 32
+
+L1= front left hip, gpio 23, 98, 72
+
+L3= front left knee, gpio 17, 79, 19
+
+L2= rear left hip, gpio 19, 81, 101
+
+L4= rear left knee, gpio 18, 83, 148
+
+I HOPE YOU GOT AN IDEA OF WHICH SIDE IS FRONT AND WHICH SIDE IS BACK AND WHICH LINKS ARE PLACED ON WHICH PART BY THE ABOVE SPECIFICATION
+the first number after gpio pins represent the stitting position .here the motors are at 90 degress visually. in simulation we have to consider these angles are 90 degrees.
+the next number represent the standing angle for each joint. here there is no specific degree as such but visually the robot is standing symmetrically here.
+I want you to see how the robot changed from sitting to standing. the direction of degree of change and accordingly we need to make the robot walk.
+the maximum and minimum degrees any joint can go are
+R1= 75 degrees to 174 degrees (75 is facing the leg on its right side and 174 is facing the dog in front direction)
+R3= 0 degrees to 180 degrees (0 is making the link face up and 180 is making it face down)
+R2= 21 degrres to 90 degrees (21 is making th eleg face behind the robot and 19 is making the leg face right)
+R4= 0 degrees to 180 degrees (0 is facing downwards and 180 is facing upwards)
+L1= 5 degrees to 100 degrees (5 is making the leg face forward and 100 is making it face towards the left of the robot)
+L3= 0 degrees to 180 degrees ( 0 is facing downwards and 180 is facing upwards)
+L2= 76 degrees to 168 degrees (72 is making the leg face left and 168 is making the leg face behind wrt the robot)
+L4= 0 degrees to 180 degrees (0 is making the leg face up and 180 is making it face down)
+The degrees given above are not absolute degrees but just something that can help you know the constraints and motion direction of each joint and link. keep this in mind and remember the direction of each joint while turning the links. after the minimum and maximum degrees the links collide and cant be seen visually moving so there is no use exceeding these limits.
+i just want you to get the walking trait right with these. while walking the knee joints to touch the ground use degrees more (or less, depending on which direction is down) than the standing stance because standing stance is close to the initial touch angles to the ground (what i mean is in standing stance the robot makes contact with the floor initially or a few degrees before that stance the robot made contact but the extra degrees were added to make it stand uniformly).
+
+before designing the walking gait study the initial gait provided by their GitHub and make me understand which joints move by how much to make the robot go forward, backward, turn right, left, or do other stuff. so even if you get the walking gait wrong i can understand where it was going wrong and we can make a few changes.
+
+here is the output from the previous code that you gave for calibration.
+// ====== CALIBRATED PHYSICAL JOINT ANGLES ======
+// Paste these into firmware/movement-sequences.h
+
+inline void runRestPose() {
+  Serial.println(F("REST (Calibrated)"));
+  setFaceWithMode("rest", FACE_ANIM_BOOMERANG);
+  setServoAngle(R1, 78);
+  setServoAngle(R2, 81);
+  setServoAngle(L1, 98);
+  setServoAngle(L2, 81);
+  setServoAngle(R4, 91);
+  setServoAngle(R3, 87);
+  setServoAngle(L3, 79);
+  setServoAngle(L4, 83);
+}
+
+inline void runStandPose(int face = 1) {
+  Serial.println(F("STAND (Calibrated)"));
+  if (face == 1) setFaceWithMode("stand", FACE_ANIM_ONCE);
+  setServoAngle(R1, 104);
+  setServoAngle(R2, 52);
+  setServoAngle(L1, 72);
+  setServoAngle(L2, 101);
+  setServoAngle(R4, 32);
+  setServoAngle(R3, 151);
+  setServoAngle(L3, 19);
+  setServoAngle(L4, 148);
+  if (face == 1) enterIdle();
+}
+
