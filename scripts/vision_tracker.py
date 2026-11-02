@@ -158,9 +158,11 @@ class VisionTracker:
     """Primary vision tracking coordinator."""
 
     def __init__(self, width_cm: float = DEFAULT_ARENA_WIDTH_CM, height_cm: float = DEFAULT_ARENA_HEIGHT_CM,
-                 enable_hand_detect: bool = False):
+                 enable_hand_detect: bool = False, robot_id: int = ID_ROBOT, goal_id: int = ID_GOAL):
         self.transformer = MetricArenaTransformer(width_cm, height_cm)
         self.hand_detector = HandDetector(enabled=enable_hand_detect)
+        self.robot_id = int(robot_id)
+        self.goal_id = int(goal_id)
 
         # Filtered state
         self.robot_x_cm: float | None = None
@@ -210,10 +212,10 @@ class VisionTracker:
                 w_pts_dict[mid] = pts_transformed
                 w_centers[mid] = pts_transformed.mean(axis=0)
 
-            # A. Robot Pose (ID 4)
-            if ID_ROBOT in w_centers:
-                cx, cy = w_centers[ID_ROBOT]
-                pts = w_pts_dict[ID_ROBOT]
+            # A. Robot Pose (Configurable robot_id, default ID 4)
+            if self.robot_id in w_centers:
+                cx, cy = w_centers[self.robot_id]
+                pts = w_pts_dict[self.robot_id]
                 # Heading vector from marker bottom edge center to top edge center
                 top_mid = (pts[0] + pts[1]) * 0.5
                 bot_mid = (pts[3] + pts[2]) * 0.5
@@ -235,15 +237,15 @@ class VisionTracker:
                     d_heading = normalize_angle_rad(raw_heading - self.robot_heading_rad)
                     self.robot_heading_rad = normalize_angle_rad(self.robot_heading_rad + self.ema_alpha * d_heading)
 
-            # B. Goal Pose (ID 5)
-            if ID_GOAL in w_centers:
-                gx, gy = w_centers[ID_GOAL]
+            # B. Goal Pose (Configurable goal_id, default ID 5)
+            if self.goal_id in w_centers:
+                gx, gy = w_centers[self.goal_id]
                 self.goal_x_cm, self.goal_y_cm = self.transformer.warp_px_to_cm(gx, gy)
 
             # C. Dynamic Obstacle Blocks (IDs 10+)
             current_obs: dict[int, tuple[float, float]] = {}
             for mid in OBSTACLE_IDS:
-                if mid in w_centers:
+                if mid in w_centers and mid != self.robot_id and mid != self.goal_id:
                     ox, oy = w_centers[mid]
                     current_obs[mid] = self.transformer.warp_px_to_cm(ox, oy)
             self.obstacles = current_obs

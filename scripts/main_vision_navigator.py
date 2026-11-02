@@ -118,7 +118,8 @@ class VisionNavigatorNode:
                  height_cm: float = DEFAULT_ARENA_HEIGHT_CM, esp32_ip: str = "192.168.4.1",
                  enable_esp32: bool = True, enable_ros2: bool = False, headless: bool = False,
                  max_frames: int = 0, enable_hand_detect: bool = False, latency: float = 0.5,
-                 interval: float = 1.2, invert_fwd: bool = False, invert_turn: bool = False):
+                 interval: float = 1.2, invert_fwd: bool = False, invert_turn: bool = False,
+                 robot_id: int = 4, goal_id: int = 5):
         self.source = source
         self.width_cm = width_cm
         self.height_cm = height_cm
@@ -132,9 +133,13 @@ class VisionNavigatorNode:
         self.last_aligned = False
         self.current_step_interval = self.step_interval_target
         self._last_planned_goal: tuple[float, float] | None = None
+        self.robot_id = int(robot_id)
+        self.goal_id = int(goal_id)
 
         # Subsystems
-        self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm, enable_hand_detect=enable_hand_detect)
+        self.tracker = VisionTracker(width_cm=width_cm, height_cm=height_cm,
+                                     enable_hand_detect=enable_hand_detect,
+                                     robot_id=self.robot_id, goal_id=self.goal_id)
         self.planner = VisionPathPlanner(arena_width_cm=width_cm, arena_height_cm=height_cm)
         self.stanley = StanleyController()
         self.esp32 = ESP32CommandBridge(esp32_ip=esp32_ip, enabled=enable_esp32,
@@ -582,7 +587,19 @@ def main():
                         help="Invert forward/backward actuation if physical robot walks in reverse")
     parser.add_argument("--invert-turn", action="store_true",
                         help="Invert steering direction (left <-> right) for the physical ESP32")
+    parser.add_argument("--robot-id", type=int, default=4,
+                        help="ArUco marker ID for robot tracker (Default: 4)")
+    parser.add_argument("--goal-id", type=int, default=5,
+                        help="ArUco marker ID for goal target (Default: 5)")
+    parser.add_argument("--swap-ids", action="store_true",
+                        help="Swap robot and goal marker IDs (robot=5, goal=4) if markers were placed in reverse")
     args = parser.parse_args()
+
+    robot_id = args.robot_id
+    goal_id = args.goal_id
+    if args.swap_ids:
+        robot_id, goal_id = goal_id, robot_id
+        print(f"[Navigator] Marker IDs SWAPPED: Robot is ID {robot_id}, Goal is ID {goal_id}")
 
     node = VisionNavigatorNode(
         source=args.source,
@@ -597,7 +614,9 @@ def main():
         latency=args.latency,
         interval=args.interval,
         invert_fwd=args.invert_fwd,
-        invert_turn=args.invert_turn
+        invert_turn=args.invert_turn,
+        robot_id=robot_id,
+        goal_id=goal_id
     )
 
     node.run()
