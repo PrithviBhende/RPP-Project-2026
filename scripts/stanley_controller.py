@@ -23,7 +23,7 @@ import queue
 STANLEY_GAIN_K = 0.85          # Cross-track error scaling gain
 NOMINAL_VEL_CM_S = 3.8         # Quadruped nominal trot speed in cm/s
 GOAL_REACHED_RADIUS_CM = 5.0   # Stop distance threshold
-STEER_DEADBAND_DEG = 12.0      # Angular deadband before triggering left/right turn
+STEER_DEADBAND_DEG = 10.0      # Angular deadband (+-10 deg safe alignment zone, no turn needed)
 CROSS_TRACK_DEADBAND_CM = 2.0  # Cross-track deadband in cm
 
 
@@ -171,9 +171,9 @@ class ESP32CommandBridge:
             self.thread = threading.Thread(target=self._worker_loop, daemon=True)
             self.thread.start()
 
-    def trigger_step(self, action: str, pulse_sec: float = 0.65) -> bool:
+    def trigger_step(self, action: str, pulse_sec: float = 1.2) -> bool:
         """
-        Requests execution of a single discrete movement step.
+        Requests execution of a single discrete movement step (default 1.2s cycle).
         Returns True if accepted, False if bridge is busy executing another step.
         """
         if not self.enabled:
@@ -232,14 +232,14 @@ class ESP32CommandBridge:
         return success
 
     def _init_esp32_settings(self):
-        """Configures ESP32 firmware for single-cycle execution (walkCycles=1) to eliminate queue lag."""
-        url = f"http://{self.ip}/setSettings?walkCycles=1&frameDelay=80"
+        """Configures ESP32 firmware for single-cycle execution (walkCycles=1) with standard frameDelay=100 (matching web controller)."""
+        url = f"http://{self.ip}/setSettings?walkCycles=1&frameDelay=100"
         if self._send_raw_http(url, timeout=1.5):
             self.settings_configured = True
 
     def _worker_loop(self):
         while self.running:
-            # 1. Ensure initial settings (walkCycles=1) are synced upon connection
+            # 1. Ensure initial settings (walkCycles=1, frameDelay=100) are synced upon connection
             if not self.settings_configured:
                 self._init_esp32_settings()
                 if not self.settings_configured:
@@ -271,13 +271,12 @@ class ESP32CommandBridge:
                         send_act = "right"
                     elif action == "right":
                         send_act = "left"
-                # Trigger movement pulse
-                self._send_http_cmd(f"go={send_act}", timeout=1.2)
-                # Allow physical execution for pulse duration
+                # Trigger movement pulse: executes 1 full natural stride (matching web controller)
+                self._send_http_cmd(f"go={send_act}", timeout=1.5)
+                # Allow physical execution for the full stride duration (1.2s)
                 time.sleep(pulse_sec)
-                # Crisp stop & return to stand pose
-                self._send_http_cmd("stop=1", timeout=1.0)
-                self._send_http_cmd("pose=stand", timeout=1.0)
+                # After completing the 1.2s single cycle, firmware automatically
+                # enters stand pose and resets currentCommand to "".
 
             with self.lock:
                 self.is_busy = False
