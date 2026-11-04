@@ -56,25 +56,10 @@ Here are the real-world test results, simulations, and telemetry captures from t
 
 ### 🎥 Physical Robot Video Demonstrations
 
-<div align="center">
-
-#### 1. Autonomous Forward Walking & Gait Execution
-*Demonstrating stable 6-phase diagonal trot locomotion across tiled surface:*
-
-<video src="docs/evidence/bot_walking.mp4" controls="controls" width="75%"></video>
-
-*(If video preview does not load directly in your browser, [click here to download / view `docs/evidence/bot_walking.mp4`](docs/evidence/bot_walking.mp4))*
-
----
-
-#### 2. Robot Greeting & Wave Sequence
-*Executing calibrated high-stepping greeting wave and balance routine:*
-
-<video src="docs/evidence/bot_saying_hi_and_dancing.mp4" controls="controls" width="75%"></video>
-
-*(If video preview does not load directly in your browser, [click here to download / view `docs/evidence/bot_saying_hi_and_dancing.mp4`](docs/evidence/bot_saying_hi_and_dancing.mp4))*
-
-</div>
+| 1. Autonomous Forward Walking & Gait Execution | 2. Robot Greeting & Wave Sequence |
+| :---: | :---: |
+| <img src="docs/evidence/bot_walking.gif" alt="Autonomous Quadruped Walking" width="460"/><br/>[▶️ **Watch / Download Full MP4 Video (`docs/evidence/bot_walking.mp4`)**](docs/evidence/bot_walking.mp4) | <img src="docs/evidence/bot_saying_hi_and_dancing.gif" alt="Robot Greeting and Dance" width="460"/><br/>[▶️ **Watch / Download Full MP4 Video (`docs/evidence/bot_saying_hi_and_dancing.mp4`)**](docs/evidence/bot_saying_hi_and_dancing.mp4) |
+| *Physical 8-DOF Sesame executing calibrated 6-phase diagonal trot locomotion across tiled floor.* | *Calibrated high-stepping balance and greeting wave sequence.* |
 
 ---
 
