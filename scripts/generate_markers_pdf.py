@@ -283,7 +283,10 @@ def generate_aruco_pdf(output_path: str):
 
 
 def main():
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     base_dirs = [
+        os.path.join(repo_root, "markers"),
+        os.path.join(os.path.expanduser("~"), "Documents", "MYSPACE", "sesame-nav", "markers"),
         os.path.join(os.path.expanduser("~"), "Documents", "MYSPACE", "RPP-Project-2026", "markers"),
         os.path.join(os.path.expanduser("~"), "Documents", "MYSPACE", "STUDY", "robot path planning", "markers"),
     ]

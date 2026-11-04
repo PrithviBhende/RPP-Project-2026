@@ -22,7 +22,11 @@ def generate_launch_description():
     )
 
     # RViz Bridge Node publishes TF map -> base_footprint, /joint_states, /plan_path, and /obstacle_markers
-    bridge_script = '/mnt/c/Users/prith/Documents/MYSPACE/RPP-Project-2026/scripts/rviz_bridge_node.py'
+    candidate_bridge_paths = [
+        '/mnt/c/Users/prith/Documents/MYSPACE/sesame-nav/scripts/rviz_bridge_node.py',
+        '/mnt/c/Users/prith/Documents/MYSPACE/RPP-Project-2026/scripts/rviz_bridge_node.py',
+    ]
+    bridge_script = next((p for p in candidate_bridge_paths if os.path.exists(p)), candidate_bridge_paths[0])
     bridge_process = ExecuteProcess(
         cmd=['python3', bridge_script],
         name='rviz_bridge_node',

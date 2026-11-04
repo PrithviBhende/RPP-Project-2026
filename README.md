@@ -1,4 +1,4 @@
-# Sesame Quadruped: Vision-Guided Autonomous Navigator & 3D Digital Twin
+# SesameNav: Vision-Guided Autonomous Quadruped Navigator & 3D Digital Twin
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.x%20%7C%205.x-5C3EE8?logo=opencv&logoColor=white)](https://opencv.org/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Hardware](https://img.shields.io/badge/Hardware-ESP32%20WROOM--32-E7352C?logo=espressif&logoColor=white)](https://www.espressif.com/)
-[![License](https://img.shields.io/badge/Status-Tested%20%26%20Verified-2ECC71)](https://github.com/PrithviBhende/RPP-Project-2026)
+[![License](https://img.shields.io/badge/Status-Tested%20%26%20Verified-2ECC71)](https://github.com/PrithviBhende/sesame-nav)
 
 **An end-to-end autonomous robotics system featuring real-time overhead computer vision tracking (ArUco planar homography), dynamic A\* path planning with strict $\ge 5\text{ cm}$ obstacle clearance, Stanley steering path-following control, human hand safety gating, ESP32 Wi-Fi hardware-in-the-loop actuation, and a live ROS 2 Humble RViz / Gazebo 3D Digital Twin.**
 
@@ -252,8 +252,8 @@ Throughout development and physical testing, we conducted several systematic exp
 
 ```powershell
 # Clone the repository
-git clone https://github.com/PrithviBhende/RPP-Project-2026.git
-cd RPP-Project-2026
+git clone https://github.com/PrithviBhende/sesame-nav.git
+cd sesame-nav
 
 # Install Python requirements
 pip install opencv-python numpy
@@ -404,7 +404,7 @@ ALL 5 VERIFICATION TESTS PASSED SUCCESSFULLY!
 ## 📂 Repository Directory Layout
 
 ```text
-RPP-Project-2026/
+sesame-nav/
 ├── docs/
 │   ├── evidence/                         # Real-world test photos & video files
 │   │   ├── real_world_arena_setup.jpeg   # Physical arena & camera mount setup
@@ -455,5 +455,5 @@ We would like to acknowledge the foundational open-source projects and research 
 ---
 
 <div align="center">
-Developed for the 2026 Robot Path Planning (RPP) Autonomous Systems Project.
+Developed for SesameNav: Autonomous Overhead Vision Navigation & 3D Digital Twin System.
 </div>

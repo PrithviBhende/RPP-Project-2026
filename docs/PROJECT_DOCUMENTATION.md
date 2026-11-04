@@ -1,4 +1,4 @@
-# Autonomous Overhead Vision-Guided Quadruped Navigation & Digital Twin
+# SesameNav: Autonomous Overhead Vision-Guided Quadruped Navigation & Digital Twin
 ## Complete System Architecture & Engineering Reference Guide
 
 ---
