@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SesameNav: Minimal Presentation Deck</title>
+  <style>
+    :root {
+      --bg-light: #ffffff;
+      --bg-dark: #0f172a;
+      --yellow: #f59e0b;
+      --yellow-light: #fef3c7;
+      --text-dark: #0f172a;
+      --text-body: #334155;
+      --text-muted: #64748b;
+      --line-gray: #e2e8f0;
+      --card-bg: #f8fafc;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: #090d16;
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 20px;
+    }
+
+    .deck-container {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      background: var(--bg-light);
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 48px 56px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    /* Dark Title Slide */
+    .slide.dark {
+      background: var(--bg-dark);
+      color: var(--white);
+    }
+
+    /* Header */
+    .slide-header {
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--yellow);
+      margin-bottom: 8px;
+    }
+
+    .category-badge::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--yellow);
+      border-radius: 2px;
+    }
+
+    .slide-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: -0.5px;
+    }
+
+    .slide.dark .slide-title {
+      color: var(--white);
+    }
+
+    .divider {
+      height: 2px;
+      background: var(--line-gray);
+      margin-top: 14px;
+      width: 100%;
+    }
+
+    .slide.dark .divider {
+      background: #1e293b;
+    }
+
+    /* Slide Content Grid */
+    .slide-body {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 40px;
+      flex: 1;
+      align-items: center;
+      min-height: 0;
+    }
+
+    .slide-body.full {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .slide-body.split-even {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+
+    /* Points List */
+    .points-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .point-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text-body);
+    }
+
+    .point-bullet {
+      color: var(--yellow);
+      font-size: 16px;
+      line-height: 1.2;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .point-content strong {
+      color: var(--text-dark);
+      font-weight: 700;
+    }
+
+    .slide.dark .point-content {
+      color: #cbd5e1;
+    }
+
+    .slide.dark .point-content strong {
+      color: var(--white);
+    }
+
+    /* Image Containers */
+    .img-box {
+      width: 100%;
+      height: 100%;
+      max-height: 380px;
+      background: var(--card-bg);
+      border: 1px solid var(--line-gray);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .img-box img {
+      max-width: 100%;
+      max-height: 330px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    .img-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* Multi-image Stack */
+    .img-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      height: 100%;
+      justify-content: center;
+    }
+
+    .img-stack-item {
+      background: var(--card-bg);
+      border: 1px solid var(--line-gray);
+      border-radius: 6px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .img-stack-item img {
+      max-width: 100%;
+      max-height: 145px;
+      object-fit: contain;
+    }
+
+    /* Title Slide Specifics */
+    .title-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      width: 48px;
+      height: 5px;
+      background: var(--yellow);
+      margin-bottom: 24px;
+      border-radius: 2px;
+    }
+
+    .hero-title {
+      font-size: 58px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+
+    .hero-sub {
+      font-size: 22px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-bottom: 48px;
+      max-width: 850px;
+      line-height: 1.4;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      border-top: 1px solid #1e293b;
+      padding-top: 24px;
+    }
+
+    .hero-card h4 {
+      font-size: 11px;
+      color: var(--yellow);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .hero-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Challenge Box for Slide 6 */
+    .challenge-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .challenge-card {
+      background: #fafafa;
+      border-left: 3px solid var(--yellow);
+      padding: 10px 16px;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .challenge-card .title {
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 2px;
+    }
+
+    .challenge-card .desc {
+      color: var(--text-body);
+    }
+
+    /* Controls Bar */
+    .nav-bar {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1200px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      background: #1e293b;
+      color: #ffffff;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: var(--yellow);
+      color: #0f172a;
+      border-color: var(--yellow);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container">
+
+    <!-- SLIDE 1: INTRO -->
+    <div class="slide dark active" id="slide-1">
+      <div class="title-content">
+        <div class="hero-badge"></div>
+        <div class="category-badge">Autonomous Mobile Robotics & Digital Twin</div>
+        <h1 class="hero-title">SesameNav</h1>
+        <p class="hero-sub">Vision-Guided Autonomous Quadruped Navigation & 3D Digital Twin</p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <h4>Perception</h4>
+            <p>Overhead Planar Homography & ArUco Tracking</p>
+          </div>
+          <div class="hero-card">
+            <h4>Planning</h4>
+            <p>Dynamic A* Search with 5 cm Safety Clearance</p>
+          </div>
+          <div class="hero-card">
+            <h4>Control</h4>
+            <p>Stanley Path-Following & Stride Cadence Sync</p>
+          </div>
+          <div class="hero-card">
+            <h4>Simulation</h4>
+            <p>ROS 2 Humble, RViz & Gazebo Digital Twin</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: WHAT THE PROJECT IS -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <div class="category-badge">System Overview</div>
+        <h2 class="slide-title">What the Project Is & Core Operational Pipeline</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body">
+        <ul class="points-list">
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Core Objective:</strong> Achieve fully autonomous, closed-loop navigation on a lightweight 8-DOF micro-quadruped without relying on heavy or expensive on-board LiDAR or depth sensors.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Overhead Global Perception:</strong> An overhead camera captures an unobstructed arena view, rectified in real time into an orthogonal metric plane (10 px/cm) via 4-corner ArUco planar homography.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Dynamic A* Path Planning:</strong> Computes the shortest collision-free path on a 2D grid, inflating obstacle blocks by &ge; 5.0 cm and applying Euclidean line-of-sight shortcutting.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Stanley Path-Following Control:</strong> Minimizes heading error and cross-track error (CTE) relative to the planned path trajectory to determine discrete steering pulses.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Hardware-in-the-Loop Actuation:</strong> Dispatches wireless HTTP commands (<code>/cmd?go=...</code>) over Wi-Fi to an on-board ESP32 microcontroller at a paced 1.2s cadence.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Synchronized 3D Digital Twin:</strong> Broadcasts real-time UDP telemetry to ROS 2 Humble, dynamically updating joint states, TF frames, and obstacle bounds in RViz.</div>
+          </li>
+        </ul>
+        <div class="img-box">
+          <img src="evidence/real_world_arena_setup.jpeg" alt="Real World Arena Setup">
+          <div class="img-caption">Physical 100 x 80 cm Arena with Overhead Camera & Quadruped</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: KINEMATICS -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <div class="category-badge">Locomotion Mechanics</div>
+        <h2 class="slide-title">Quadruped Kinematics & Stride Synchronization</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body">
+        <ul class="points-list">
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>8-DOF Articulated Anatomy:</strong> Actuated by 8 independent micro-servos: 4 hip servos (R1, R2, L1, L2) controlling horizontal sweep, and 4 knee servos (R3, R4, L3, L4) controlling vertical leg extension.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>6-Phase Diagonal Trot Gait:</strong> Alternates diagonal limb pairs (FR+RL, then FL+RR) to maintain static stability while propelling the center of mass forward.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>1.2-Second Cadence Synchronization:</strong> Physical strides require ~1.25s to complete. Pacing controller commands with 1.2s intervals allows full mechanical foot placement, eliminating lateral drift and servo stutter.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Sagittal Flank Mirroring Compensation:</strong> Opposite servos are physically mounted in reverse: right knees extend with increasing angles (87° &rarr; 151°), while left knees extend with decreasing angles (79° &rarr; 19°).</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Empirical Angle Calibration Table:</strong> Sitting-to-standing joint angle offsets were tuned to compensate for mechanical spline teeth offsets, guaranteeing a level torso and symmetrical ground contact.</div>
+          </li>
+        </ul>
+        <div class="img-stack">
+          <div class="img-stack-item">
+            <img src="sesame-topdown.png" alt="Top-Down CAD Anatomy">
+            <div class="img-caption">CAD Top-Down Anatomical Joint Configuration</div>
+          </div>
+          <div class="img-stack-item">
+            <img src="evidence/real_setup_nav_hud.png" alt="Planar Homography HUD">
+            <div class="img-caption">Rectified Planar Homography HUD (10 px/cm Metric Frame)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: GAZEBO -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <div class="category-badge">Physics Simulation</div>
+        <h2 class="slide-title">Gazebo Dynamic Validation & Arena Modeling</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body">
+        <ul class="points-list">
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Pre-Deployment Kinematic Verification:</strong> Provides a safe virtual sandbox to evaluate quadruped stability, center-of-mass trajectory, and obstacle avoidance physics prior to physical hardware execution.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Arena Environment Modeling:</strong> Constructed a calibrated simulation world (<code>chartpaper_arena.world</code>) matching physical dimensions (100 x 80 cm), with realistic ground contact friction and gravity models.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Rigid-Body Dynamics & URDF Definitions:</strong> Incorporates link mass distributions, principal inertia tensors, joint limits, and friction coefficients derived from Fusion 360 CAD specifications.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Interactive Dynamic Obstacle Relocation:</strong> Supports live drag-and-drop repositioning of 3D obstacle boxes during runtime to rigorously test dynamic re-planning responsiveness and collision margins.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Sim-to-Real Kinematic Parity:</strong> Ensures standard ROS 2 coordinate conventions (+x forward, +y left, +z up) match across simulation and physical hardware actuation.</div>
+          </li>
+        </ul>
+        <div class="img-box">
+          <img src="evidence/gazebo_arena_simulation.png" alt="Gazebo Arena Simulation">
+          <div class="img-caption">Gazebo Classic Arena with Sesame Robot & Dynamic Obstacles</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: RVIZ WITH CAM -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <div class="category-badge">Perception & Telemetry</div>
+        <h2 class="slide-title">Planar Homography & Live RViz Digital Twin</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body">
+        <ul class="points-list">
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Planar Homography Coordinate Rectification:</strong> Computes a 3x3 homography matrix (H) from 4 arena corner ArUco markers, continuously rectifying tilted camera perspectives into an orthogonal top-down space (10 px/cm).</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Sub-Pixel Temporal Filtering:</strong> Applies an Exponential Moving Average (EMA, &alpha; = 0.65) filter on robot coordinates and heading angles, attenuating camera noise and sub-pixel detection jitter.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Low-Latency UDP State Streaming:</strong> Streams robot coordinates, heading, goal, and obstacle boundaries as JSON datagrams over UDP port 9090 from the Windows vision engine to WSL ROS 2.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>RViz Digital Twin Synchronization:</strong> Subscribes to incoming telemetry and publishes <code>/joint_states</code>, TF frame transforms (<code>/map &rarr; /base_footprint</code>), planned <code>/path</code>, and 3D obstacle markers.</div>
+          </li>
+          <li class="point-item">
+            <span class="point-bullet">▪</span>
+            <div class="point-content"><strong>Human Presence Safety Gating:</strong> Integrates real-time HSV skin-color detection to pause locomotion automatically whenever a human hand enters the arena to rearrange obstacle blocks.</div>
+          </li>
+        </ul>
+        <div class="img-box">
+          <img src="evidence/rviz_camera_path_navigation.jpeg" alt="RViz Digital Twin">
+          <div class="img-caption">RViz Digital Twin Displaying Camera Feed, TF Tree & Planned Path</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: PROBLEMS & SOLUTIONS -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <div class="category-badge">Experimental Analysis</div>
+        <h2 class="slide-title">Technical Challenges Faced & Implemented Solutions</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body full">
+        <div class="challenge-grid">
+          <div class="challenge-card">
+            <div class="title">1. Surface Slip & Inability to Walk Straight</div>
+            <div class="desc"><strong>Challenge:</strong> Smooth 3D-printed PLA foot tips suffered from a low coefficient of static friction on polished floor tiles, causing feet to slip and the robot to deviate from straight walking.<br>
+            <strong>Solution:</strong> Applied a layer of <strong>Fevibond rubberized adhesive</strong> to the foot tips and allowed it to dry, forming high-traction rubberized contact pads that eliminated ground slip.</div>
+          </div>
+          <div class="challenge-card">
+            <div class="title">2. Actuation Flooding & Crab-Walking (Lateral Drift)</div>
+            <div class="desc"><strong>Challenge:</strong> Streaming high-frequency steering commands (10 Hz) overwhelmed the ESP32 servo queue, interrupting 6-phase step cycles mid-stride and causing erratic crab-like lateral walking.<br>
+            <strong>Solution:</strong> Enforced a <strong>1.2-second discrete step cadence</strong> matching the hardware's 1.25s physical stride, allowing legs to complete their swing-plant cycle before re-evaluating CTE.</div>
+          </div>
+          <div class="challenge-card">
+            <div class="title">3. Flank Asymmetry from Mirror-Mounted Servos</div>
+            <div class="desc"><strong>Challenge:</strong> Symmetrical servo PWM values curled the left leg up while extending the right leg down because opposite flanks have physically inverted mounting orientations.<br>
+            <strong>Solution:</strong> Built an empirical joint calibration matrix in firmware, establishing independent left vs. right angle transformation equations for level stance and gait execution.</div>
+          </div>
+          <div class="challenge-card">
+            <div class="title">4. Sub-Pixel Vision Jitter & Steering Oscillation</div>
+            <div class="desc"><strong>Challenge:</strong> Natural ambient lighting variations and sub-millimeter visual marker jitter caused rapid, alternating left-right steering chatter.<br>
+            <strong>Solution:</strong> Implemented a <strong>&plusmn;10&deg; heading deadband</strong> in the Stanley controller; within this threshold, the robot commands pure forward walking without unnecessary turns.</div>
+          </div>
+          <div class="challenge-card">
+            <div class="title">5. Marker Transposition Handling</div>
+            <div class="desc"><strong>Challenge:</strong> Accidentally swapping physical markers (ID 5 on robot, ID 4 on floor) caused the planner to command the floor target toward the robot.<br>
+            <strong>Solution:</strong> Integrated a runtime <code>--swap-ids</code> CLI parameter to dynamically flip robot and goal tracking identities in software without re-taping physical stickers.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: CONCLUSION & FUTURE SCOPE -->
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <div class="category-badge">Conclusion & Future Horizons</div>
+        <h2 class="slide-title">Project Summary & Future Research Directions</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="slide-body split-even">
+        <div>
+          <h3 style="font-size: 16px; color: var(--yellow); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Project Summary</h3>
+          <ul class="points-list">
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Global Perception Architecture:</strong> Demonstrated that robust, autonomous closed-loop navigation can be achieved on micro-scale quadrupeds using an overhead vision system, bypassing on-board sensor payload constraints.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>End-to-End Pipeline:</strong> Successfully validated complete hardware-in-the-loop operation: overhead ArUco homography, dynamic A* path planning, Stanley steering, and wireless ESP32 execution.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Digital Twin Integration:</strong> Connected real-world locomotion with low-latency ROS 2 Humble RViz telemetry and validated dynamic kinematic constraints within Gazebo Classic simulation.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Pragmatic Engineering:</strong> Proved that combining simple physical enhancements (Fevibond friction soles) with disciplined control pacing (1.2s cadence) overcomes low-cost hardware limitations.</div>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="font-size: 16px; color: var(--yellow); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Future Research Directions</h3>
+          <ul class="points-list">
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Reinforcement Learning (RL) Locomotion:</strong> Train deep RL policies (e.g., PPO in Isaac Gym or MuJoCo) to replace fixed kinematic trot gaits with adaptive, robust locomotion capable of traversing carpet, gravel, and uneven terrains.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>On-Board Inertial Sensor Fusion:</strong> Integrate an on-board 6-DOF IMU (MPU6050) with an Extended Kalman Filter (EKF) to fuse overhead vision with on-board acceleration for real-time slip detection and balance recovery.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Dynamic Obstacle Velocity Tracking:</strong> Incorporate predictive Kalman filtering and Velocity Obstacle (VO) algorithms to autonomously detect, track, and bypass moving obstacles in dense environments.</div>
+            </li>
+            <li class="point-item">
+              <span class="point-bullet">▪</span>
+              <div class="point-content"><strong>Vision-Based Auto-Calibration:</strong> Leverage the overhead camera to automatically detect foot contact slip and iteratively tune individual servo PWM offsets without manual trim calibration.</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Navigation Bar -->
+  <div class="nav-bar">
+    <div id="slide-indicator">Slide 1 of 7</div>
+    <div class="nav-buttons">
+      <button class="nav-btn" onclick="prevSlide()">◀ Previous</button>
+      <button class="nav-btn" onclick="nextSlide()">Next ▶</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 7;
+
+    function showSlide(n) {
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const active = document.getElementById(`slide-${n}`);
+      if (active) {
+        active.classList.add('active');
+        document.getElementById('slide-indicator').innerText = `Slide ${n} of ${totalSlides}`;
+      }
+    }
+
+    function nextSlide() {
+      currentSlide = currentSlide < totalSlides ? currentSlide + 1 : 1;
+      showSlide(currentSlide);
+    }
+
+    function prevSlide() {
+      currentSlide = currentSlide > 1 ? currentSlide - 1 : totalSlides;
+      showSlide(currentSlide);
+    }
+
+    // Keyboard Navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>
